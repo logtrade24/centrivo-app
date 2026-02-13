@@ -3575,7 +3575,9 @@ function showConfirmationModalApi(payload) {
     payload?.login ||
     'OK';
 
-  const action = payload?.action || payload?.type || payload?.event || 'scan';
+  const rawAction = payload?.action || payload?.type || payload?.event || 'scan';
+  const action = String(rawAction).trim().toUpperCase();
+
 
   const humanActionMap = {
     // kody z API / arkusza
@@ -3583,13 +3585,6 @@ function showConfirmationModalApi(payload) {
     'EXIT': 'Wychodzę z pracy',
     'BREAK_START': 'Wychodzę na przerwę',
     'BREAK_END': 'Wracam z przerwy',
-
-    // jeśli backend czasem zwraca te “slug’i”
-    'wchodzi': 'Wchodzę',
-    'wychodzi-przerwa': 'Wychodzę na przerwę',
-    'wracam': 'Wracam z przerwy',
-    'wychodzi-pracy': 'Wychodzę z pracy',
-    'zmieniam-operacje': 'Zmieniam operację'
   };
 
   const tsRaw = payload?.timestamp || payload?.time || payload?.dateTime || '';
