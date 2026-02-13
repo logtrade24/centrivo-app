@@ -3514,6 +3514,23 @@ body.modal-open{
     </div>
 
 <script>
+  // ===== API (Cloudflare Pages -> Render) =====
+  const API_BASE = 'https://api.centrivo.pl';
+
+  async function apiScan(code){
+    const r = await fetch(`${API_BASE}/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      throw new Error(data?.message || `HTTP ${r.status}`);
+    }
+    return data;
+  }
+
   // ===== OPTYMALIZACJA - NATYCHMIASTOWA REAKCJA UI =====
 
 /**
@@ -4798,6 +4815,16 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 function checkSession() {
+    // 🔥 Cloudflare Pages: zawsze pokazuj rejestrator (bez logowania Apps Script)
+    isLoggedIn = true;
+    const loginScreen = document.getElementById('loginScreen');
+    const mainInterface = document.getElementById('mainInterface');
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (mainInterface) mainInterface.style.display = 'block';
+    if (typeof showView === 'function') showView('department');
+    setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
+    return;
+
   const sessionLogin = sessionStorage.getItem('isLoggedIn');
   const loggedInUser = sessionStorage.getItem('loggedInUser');
 
@@ -9303,6 +9330,34 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
             
             const cleanCode = code.toString().replace(/^~+/, '').replace(/~+$/, '').trim();
             console.log('Kod po oczyszczeniu:', cleanCode);
+
+            // ===== TRYB API (bez Google Apps Script) =====
+            showNotification('⏳ Wysyłam do API...', 'info');
+
+            apiScan(cleanCode)
+              .then((data) => {
+                // Przykład: { success:true, user:"...", action:"BREAK_END", status:"WORKING", message:"..." }
+                const statusEl = document.getElementById('statusInfo');
+
+                const line =
+                  (data.user ? data.user : '') +
+                  (data.action ? ` • ${data.action}` : '') +
+                  (data.status ? ` • ${data.status}` : '');
+
+                if (statusEl) statusEl.textContent = line || (data.message || 'OK');
+
+                if (data.success === false) {
+                  showNotification(data.message || '❌ Odrzucono', 'error');
+                } else {
+                  showNotification(data.message || '✅ Zapisano', 'success');
+                }
+              })
+              .catch((err) => {
+                console.error(err);
+                showNotification('❌ Błąd API: ' + (err?.message || err), 'error');
+              });
+
+            return; // <- ważne: nie lecimy dalej w starą logikę (departments/google.script.run)
             
             let foundUser = null;
             let foundDepartment = null;
