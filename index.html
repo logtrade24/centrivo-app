@@ -9311,6 +9311,41 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
   modal.classList.add('show');
 }
 
+    function showConfirmationModalApi(data) {
+  const modal = document.getElementById('confirmationModal');
+  const title = document.getElementById('confirmationTitle');
+  const message = document.getElementById('confirmationMessage');
+  const timestampEl = document.getElementById('confirmationTimestamp');
+  const actionEl = document.getElementById('confirmationAction');
+  if (!modal || !title || !message || !timestampEl || !actionEl) return;
+
+  const userLogin =
+    (data && data.user && typeof data.user === 'object' ? data.user.login : null) ||
+    (data && typeof data.user === 'string' ? data.user : null) ||
+    data?.employeeId ||
+    data?.login ||
+    'OK';
+
+  const action = data?.type || data?.action || data?.event || 'SCAN';
+  const iso = data?.timestamp || data?.time || '';
+  const ts = iso ? new Date(iso).toLocaleString('pl-PL') : '-';
+
+  const map = {
+    IN: 'Wchodzę',
+    OUT: 'Wychodzę z pracy',
+    BREAK_START: 'Wychodzę na przerwę',
+    BREAK_END: 'Wracam z przerwy'
+  };
+
+  title.textContent = `BRAWO ${userLogin}!`;
+  message.textContent = data?.message || 'Zapisano.';
+  timestampEl.textContent = `czas: ${ts}`;
+  actionEl.textContent = map[action] || String(action);
+
+  modal.setAttribute('data-action', String(action));
+  modal.classList.add('show');
+}
+
         function getStatusColor(status) {
             switch(status) {
                 case 'Zatwierdzony': return '#28a745';
