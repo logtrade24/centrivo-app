@@ -41,12 +41,15 @@ Wersja: 2.0
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .status-left {
             display: flex;
             gap: 20px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .status-button {
@@ -188,14 +191,17 @@ Wersja: 2.0
           gap: 8px;
       }
 
-      .session-info {
-          position: relative;
+      .session-info{
           text-align: center;
-      }
-
-      .current-time {
-            position: relative;
-            right: 765px;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          justify-content:center;
+        }
+        
+        .current-time{
+          position: static !important;
+          right: auto !important;
         }
 
         .current-date {
