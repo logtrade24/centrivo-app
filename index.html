@@ -4815,80 +4815,17 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 function checkSession() {
-    // 🔥 Cloudflare Pages: zawsze pokazuj rejestrator (bez logowania Apps Script)
-    isLoggedIn = true;
-    const loginScreen = document.getElementById('loginScreen');
-    const mainInterface = document.getElementById('mainInterface');
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainInterface) mainInterface.style.display = 'block';
-    if (typeof showView === 'function') showView('department');
-    setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
-    return;
+  // 🔥 Cloudflare Pages: zawsze pokazuj rejestrator (bez logowania Apps Script)
+  isLoggedIn = true;
 
-  const sessionLogin = sessionStorage.getItem('isLoggedIn');
-  const loggedInUser = sessionStorage.getItem('loggedInUser');
+  var loginScreen = document.getElementById('loginScreen');
+  var mainInterface = document.getElementById('mainInterface');
 
-  const loginScreen = document.getElementById('loginScreen');
-  const mainInterface = document.getElementById('mainInterface');
+  if (loginScreen) loginScreen.style.display = 'none';
+  if (mainInterface) mainInterface.style.display = 'block';
 
-  if (sessionLogin === 'true') {
-    isLoggedIn = true;
-
-    // pokaż główny widok
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainInterface) mainInterface.style.display = 'block';
-
-    // przyciski kierownika
-    if (loggedInUser === 'jerzyd') {
-      document.getElementById('dashboardBtn').style.display = 'inline-block';
-      document.getElementById('announcementsBtn').style.display = 'inline-block';
-      document.getElementById('workforcePlannerBtn').style.display = 'inline-block';
-      document.getElementById('workforceLiveBtn').style.display = 'inline-block';
-    } else {
-      document.getElementById('dashboardBtn').style.display = 'none';
-      document.getElementById('announcementsBtn').style.display = 'none';
-      document.getElementById('workforcePlannerBtn').style.display = 'none';
-      document.getElementById('workforceLiveBtn').style.display = 'none';
-    }
-
-    // rzeczy “startowe”
-    preloadAllAnnouncementsCache();
-    updateTicketsNotificationBadge();
-    startAutoRefresh();
-
-    // 🔒 po refresh przeglądarka lubi trzymać fokus na ukrytym login/password
-    const loginInput = document.getElementById('loginInput');
-    const passwordInput = document.getElementById('passwordInput');
-    if (loginInput) loginInput.blur();
-    if (passwordInput) passwordInput.blur();
-    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-
-    // upewnij się, że jesteśmy w głównym widoku aplikacji
-    if (typeof showView === 'function') {
-      showView('department');
-    }
-
-    // kilka prób, bo UI/tiles dorysowują się asynchronicznie
-    requestAnimationFrame(() => {
-      focusEanInput();
-      requestAnimationFrame(focusEanInput);
-    });
-
-    setTimeout(focusEanInput, 80);
-    setTimeout(focusEanInput, 250);
-    setTimeout(focusEanInput, 600);
-
-  } else {
-    isLoggedIn = false;
-
-    if (loginScreen) loginScreen.style.display = 'block';
-    if (mainInterface) mainInterface.style.display = 'none';
-
-    setTimeout(() => {
-      const li = document.getElementById('loginInput');
-      if (li) li.focus();
-    }, 100);
-  }
+  if (typeof showView === 'function') showView('department');
+  setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
 }
 
 function handleLogin() {
