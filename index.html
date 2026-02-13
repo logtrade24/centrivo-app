@@ -4854,6 +4854,24 @@ function checkSession() {
   setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
 }
 
+    function localLogin(){
+  sessionStorage.setItem('isLoggedIn', 'true');
+  isLoggedIn = true;
+
+  const ls = document.getElementById('loginScreen');
+  const mi = document.getElementById('mainInterface');
+
+  if (ls) ls.style.display = 'none';
+  if (mi) mi.style.display = 'block';
+
+  if (typeof showView === 'function') showView('department');
+  setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
+
+  // czyścimy ewentualny komunikat błędu logowania
+  const err = document.getElementById('loginError');
+  if (err) { err.textContent = ''; err.style.display = 'none'; }
+}
+
 function handleLogin() {
   // Jeśli jesteśmy na Pages (brak Apps Script) -> logowanie lokalne
   const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
@@ -4927,13 +4945,13 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (loginInput) {
     loginInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') handleLogin();
+      if (e.key === 'Enter') localLogin();
     });
   }
   
   if (passwordInput) {
     passwordInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') handleLogin();
+      if (e.key === 'Enter') localLogin();
     });
   }
 });
