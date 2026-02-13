@@ -3541,10 +3541,23 @@ body.modal-open{
 
 <script>
   // ===== API (Cloudflare Pages -> Render) =====
-  const API_BASE = 'https://api.centrivo.pl';
+const API_BASE = 'https://api.centrivo.pl';
 
-  async function apiScan(code){
-      function showConfirmationModalApi(payload) {
+function formatPlDateTime(ts){
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return String(ts);
+  return d.toLocaleString('pl-PL', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+function showConfirmationModalApi(payload) {
   const modal = document.getElementById('confirmationModal');
   const title = document.getElementById('confirmationTitle');
   const message = document.getElementById('confirmationMessage');
@@ -3553,42 +3566,57 @@ body.modal-open{
 
   if (!modal || !title || !message || !timestampEl || !actionEl) return;
 
-  // payload może być różny – robimy bezpieczne fallbacki
-  const userLogin = payload?.user?.login || payload?.login || payload?.userLogin || 'OK';
+  const who =
+    payload?.name ||
+    payload?.employeeName ||
+    payload?.employeeId ||
+    payload?.user?.login ||
+    payload?.user ||
+    payload?.login ||
+    'OK';
+
   const action = payload?.action || payload?.type || payload?.event || 'scan';
-  const ts = payload?.timestamp || payload?.time || payload?.dateTime || '';
 
   const humanActionMap = {
+    // kody z API / arkusza
+    'ENTRY': 'Wchodzę',
+    'EXIT': 'Wychodzę z pracy',
+    'BREAK_START': 'Wychodzę na przerwę',
+    'BREAK_END': 'Wracam z przerwy',
+
+    // jeśli backend czasem zwraca te “slug’i”
     'wchodzi': 'Wchodzę',
     'wychodzi-przerwa': 'Wychodzę na przerwę',
     'wracam': 'Wracam z przerwy',
     'wychodzi-pracy': 'Wychodzę z pracy',
-    'zmieniam-operacje': 'Zmieniam operację',
+    'zmieniam-operacje': 'Zmieniam operację'
   };
 
-  title.textContent = `BRAWO ${userLogin}!`;
+  const tsRaw = payload?.timestamp || payload?.time || payload?.dateTime || '';
+  const ts = formatPlDateTime(tsRaw);
+
+  title.textContent = `BRAWO ${String(who).toUpperCase()}!`;
   message.textContent = payload?.message || 'Zapisano.';
   timestampEl.textContent = ts ? `czas: ${ts}` : 'czas: -';
   actionEl.textContent = humanActionMap[action] || String(action);
 
-  // ustaw data-action, żeby było spójnie z resztą kodu
   modal.setAttribute('data-action', String(action));
-
-  // pokaż modal
   modal.classList.add('show');
 }
-    const r = await fetch(`${API_BASE}/scan`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code })
-    });
 
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      throw new Error(data?.message || `HTTP ${r.status}`);
-    }
-    return data;
+async function apiScan(code){
+  const r = await fetch(`${API_BASE}/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(data?.message || `HTTP ${r.status}`);
   }
+  return data;
+}
 
   // ===== OPTYMALIZACJA - NATYCHMIASTOWA REAKCJA UI =====
 
