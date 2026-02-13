@@ -11820,23 +11820,24 @@ function refreshLiveWorkforce() {
               if (l4EndDateInput) l4EndDateInput.addEventListener('change', calculateL4WorkingDays);
             
               // ✅ Apps Script rzeczy tylko jeśli istnieje google.script.run
-              const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
-            
-              if (hasAppsScript) {
+                const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+                
+                // 🔹 To uruchamiamy ZAWSZE (również na Cloudflare Pages)
                 loadDepartmentsFromSpreadsheet();
                 setupDepartmentTileBadges();
-            
                 refreshLiveWorkforce();
                 setTimeout(refreshLiveWorkforce, 800);
-            
-                updateManagerNotificationBadge();
-                startAutoRefresh();
-            
-                console.log('Rejestrator uruchomiony w Apps Script!');
-              } else {
-                console.log('Tryb Cloudflare Pages: pomijam Apps Script init');
-              }
-            });
+                
+                if (hasAppsScript) {
+                
+                  updateManagerNotificationBadge();
+                  startAutoRefresh();
+                
+                  console.log('Rejestrator uruchomiony w Apps Script!');
+                
+                } else {
+                  console.log('Tryb Cloudflare Pages: Apps Script wyłączony, ale działy załadowane');
+                }
 
         // ===== MODUŁ L4 - ZWOLNIENIA LEKARSKIE =====
 
