@@ -11651,102 +11651,92 @@ function refreshLiveWorkforce() {
 }
 
         // ===== INICJALIZACJA =====
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM załadowany - inicjalizuję aplikację...');
-
-    loadSavedTheme();
-    updateTime();
-    setInterval(updateTime, 1000);
-    updateButtonStates();
-    loadDepartmentsFromSpreadsheet();
-    setupDepartmentTileBadges();
-    refreshLiveWorkforce();
-
-    
-    // POPRAWKA: Załaduj licznik wniosków urlopowych przy starcie
-    updateManagerNotificationBadge();  // ← DODAJ TĘ LINIĘ!
-    
-    startAutoRefresh();
+            document.addEventListener('DOMContentLoaded', function() {
+              console.log('DOM załadowany - inicjalizuję aplikację...');
             
-            const input = document.getElementById('codeInput');
-            if (input) {
+              loadSavedTheme();
+              updateTime();
+              setInterval(updateTime, 1000);
+              updateButtonStates();
+            
+              const input = document.getElementById('codeInput');
+              if (input) {
                 input.addEventListener('keypress', handleKeyPress);
                 input.addEventListener('input', handleInput);
                 input.focus();
                 console.log('Pole kodu zainicjalizowane');
-            }
-
-            const verificationInput = document.getElementById('verificationCodeInput');
-            if (verificationInput) {
+              }
+            
+              const verificationInput = document.getElementById('verificationCodeInput');
+              if (verificationInput) {
                 verificationInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmUserCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmUserCode();
+                  }
                 });
-            }
-
-            const vacationCodeInput = document.getElementById('vacationVerificationCodeInput');
-            if (vacationCodeInput) {
+              }
+            
+              const vacationCodeInput = document.getElementById('vacationVerificationCodeInput');
+              if (vacationCodeInput) {
                 vacationCodeInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmVacationUserCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmVacationUserCode();
+                  }
                 });
-            }
-
-            const l4VerificationInput = document.getElementById('l4VerificationCodeInput');
-            if (l4VerificationInput) {
+              }
+            
+              const l4VerificationInput = document.getElementById('l4VerificationCodeInput');
+              if (l4VerificationInput) {
                 l4VerificationInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmL4ManagerCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmL4ManagerCode();
+                  }
                 });
-            }
+              }
             
-            const ticketVerificationInput = document.getElementById('ticketVerificationCodeInput');
-            if (ticketVerificationInput) {
+              const ticketVerificationInput = document.getElementById('ticketVerificationCodeInput');
+              if (ticketVerificationInput) {
                 ticketVerificationInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmTicketUserCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmTicketUserCode();
+                  }
                 });
-            }
-            const startDateInput = document.getElementById('vacationStartDate');
-            const endDateInput = document.getElementById('vacationEndDate');
+              }
             
-            if (startDateInput) {
-                startDateInput.addEventListener('change', calculateVacationInfo);
-            }
-            if (endDateInput) {
-                endDateInput.addEventListener('change', calculateVacationInfo);
-            }
-
-            // Event listenery dla dat L4
-            const l4StartDateInput = document.getElementById('l4StartDate');
-            const l4EndDateInput = document.getElementById('l4EndDate');
-
-            if (l4StartDateInput) {
-                l4StartDateInput.addEventListener('change', calculateL4WorkingDays);
-            }
-            if (l4EndDateInput) {
-                l4EndDateInput.addEventListener('change', calculateL4WorkingDays);
-            }
-
-            setupDepartmentTileBadges();
-
-            // od razu + drugi raz po chwili, bo kafelki mogą się dorysować chwilę później
-            refreshLiveWorkforce();
-            setTimeout(refreshLiveWorkforce, 800);
-            console.log('Rejestrator uruchomiony w Apps Script!');
-        });
-
-        window.addEventListener('beforeunload', function() {
-            stopAutoRefresh();
-        });
+              const startDateInput = document.getElementById('vacationStartDate');
+              const endDateInput = document.getElementById('vacationEndDate');
+            
+              if (startDateInput) startDateInput.addEventListener('change', calculateVacationInfo);
+              if (endDateInput) endDateInput.addEventListener('change', calculateVacationInfo);
+            
+              const l4StartDateInput = document.getElementById('l4StartDate');
+              const l4EndDateInput = document.getElementById('l4EndDate');
+            
+              if (l4StartDateInput) l4StartDateInput.addEventListener('change', calculateL4WorkingDays);
+              if (l4EndDateInput) l4EndDateInput.addEventListener('change', calculateL4WorkingDays);
+            
+              // ✅ Apps Script rzeczy tylko jeśli istnieje google.script.run
+              const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+            
+              if (hasAppsScript) {
+                loadDepartmentsFromSpreadsheet();
+                setupDepartmentTileBadges();
+            
+                refreshLiveWorkforce();
+                setTimeout(refreshLiveWorkforce, 800);
+            
+                updateManagerNotificationBadge();
+                startAutoRefresh();
+            
+                console.log('Rejestrator uruchomiony w Apps Script!');
+              } else {
+                console.log('Tryb Cloudflare Pages: pomijam Apps Script init');
+              }
+            });
 
         // ===== MODUŁ L4 - ZWOLNIENIA LEKARSKIE =====
 
