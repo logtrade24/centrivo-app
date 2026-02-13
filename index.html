@@ -2544,7 +2544,7 @@ body.modal-open{
         >
       </div>
       
-      <button onclick="handleLogin()" class="login-button">
+      <button onclick="localLogin()" class="login-button">
         <span>🔓</span>
         <span>Zaloguj się</span>
       </button>
@@ -4855,16 +4855,23 @@ function checkSession() {
 }
 
 function handleLogin() {
+  // Jeśli jesteśmy na Pages (brak Apps Script) -> logowanie lokalne
+  const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+  if (!hasAppsScript) {
+    localLogin();
+    return;
+  }
+
   const login = document.getElementById('loginInput').value.trim();
   const password = document.getElementById('passwordInput').value;
   const errorDiv = document.getElementById('loginError');
-  
+
   if (!login || !password) {
     errorDiv.textContent = '⚠️ Wypełnij wszystkie pola!';
     errorDiv.style.display = 'block';
     return;
   }
-  
+
   google.script.run
     .withSuccessHandler(function(response) {
       if (response.success) {
@@ -4873,18 +4880,18 @@ function handleLogin() {
         sessionStorage.setItem('isLoggedIn', 'true');
         sessionStorage.setItem('loggedInUser', login);
         isLoggedIn = true;
-        
+
         // Schowaj ekran logowania, pokaż interfejs
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainInterface').style.display = 'block';
         errorDiv.style.display = 'none';
-        
+
         // Załaduj dane + UI
         loadDepartmentsFromSpreadsheet();
         updateTime();
         updateTicketsNotificationBadge();
         startAutoRefresh();
-        
+
         // Pokaż przyciski tylko dla kierownika
         if (response.isManager) {
           document.getElementById('dashboardBtn').style.display = 'inline-block';
@@ -4898,11 +4905,10 @@ function handleLogin() {
           document.getElementById('workforceLiveBtn').style.display = 'none';
         }
 
-        // ✅ Fokus na pole skanowania EAN (dla wszystkich)
+        // Fokus na pole skanowania EAN
         focusEanInput();
 
       } else {
-        // Błąd logowania
         errorDiv.textContent = response.message;
         errorDiv.style.display = 'block';
       }
