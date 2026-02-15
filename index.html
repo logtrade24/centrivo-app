@@ -2544,7 +2544,7 @@ body.modal-open{
         >
       </div>
       
-      <button onclick="localLogin()" class="login-button">
+      <button onclick="handleLogin()" class="login-button">
         <span>🔓</span>
         <span>Zaloguj się</span>
       </button>
@@ -5005,8 +5005,23 @@ function checkSession() {
   setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
 }
 
-    function localLogin(){
+    function setManagerButtons(isManager){
+  const dash = document.getElementById('dashboardBtn');
+  const ann  = document.getElementById('announcementsBtn');
+  const wf   = document.getElementById('workforcePlannerBtn');
+  const live = document.getElementById('workforceLiveBtn');
+
+  const show = isManager ? 'inline-block' : 'none';
+  if (dash) dash.style.display = show;
+  if (ann)  ann.style.display = show;
+  if (wf)   wf.style.display = show;
+  if (live) live.style.display = show;
+}
+
+    function localLogin(login){
   sessionStorage.setItem('isLoggedIn', 'true');
+  if (login) sessionStorage.setItem('loggedInUser', login);
+
   isLoggedIn = true;
 
   const ls = document.getElementById('loginScreen');
@@ -5015,10 +5030,13 @@ function checkSession() {
   if (ls) ls.style.display = 'none';
   if (mi) mi.style.display = 'block';
 
+  // pokaż/ukryj kafelki kierownika
+  const isManager = (String(login || '').trim() === 'jerzyd');
+  setManagerButtons(isManager);
+
   if (typeof showView === 'function') showView('department');
   setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
 
-  // czyścimy ewentualny komunikat błędu logowania
   const err = document.getElementById('loginError');
   if (err) { err.textContent = ''; err.style.display = 'none'; }
 }
@@ -5027,9 +5045,20 @@ function handleLogin() {
   // Jeśli jesteśmy na Pages (brak Apps Script) -> logowanie lokalne
   const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
   if (!hasAppsScript) {
-    localLogin();
+  const login = document.getElementById('loginInput').value.trim();
+  const password = document.getElementById('passwordInput').value; // na razie nie weryfikujemy w Pages
+  if (!login || !password) {
+    const errorDiv = document.getElementById('loginError');
+    if (errorDiv) {
+      errorDiv.textContent = '⚠️ Wypełnij wszystkie pola!';
+      errorDiv.style.display = 'block';
+    }
     return;
   }
+
+  localLogin(login);
+  return;
+}
 
   const login = document.getElementById('loginInput').value.trim();
   const password = document.getElementById('passwordInput').value;
@@ -5096,13 +5125,13 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (loginInput) {
     loginInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') localLogin();
+      if (e.key === 'Enter') handleLogin();
     });
   }
   
   if (passwordInput) {
     passwordInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') localLogin();
+      if (e.key === 'Enter') handleLogin();
     });
   }
 });
@@ -8057,6 +8086,8 @@ function logoutUser() {
         // Ukryj przycisk Dashboard
         document.getElementById('dashboardBtn').style.display = 'none';
         document.getElementById('announcementsBtn').style.display = 'none';
+        document.getElementById('workforcePlannerBtn').style.display = 'none';
+        document.getElementById('workforceLiveBtn').style.display = 'none';
         
         // Pokaż ekran logowania
         document.getElementById('mainInterface').style.display = 'none';
