@@ -3612,6 +3612,32 @@ async function apiScan(code){
   return data;
 }
 
+    async function apiGetUnreadAnnouncements(login){
+  const r = await fetch(`${API_BASE}/announcements/unread`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+
+  return data.announcements || [];
+}
+
+async function apiMarkAnnouncementAsRead(id, login){
+  const r = await fetch(`${API_BASE}/announcements/mark-read`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, login })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+
+  return data;
+}
+
     async function apiAddTimeEntry(payload){
   const r = await fetch(`${API_BASE}/time-entry`, {
     method: 'POST',
@@ -11217,33 +11243,58 @@ let currentAnnouncementIndex = 0;
 let pendingRegistrationData = null;
 
 function checkForAnnouncements(loginPracownika, afterCallback) {
-    console.log('🔔 checkForAnnouncements WYWOŁANA z loginem:', loginPracownika);
-    
-    pendingRegistrationData = afterCallback;
-    
+  console.log('🔔 checkForAnnouncements WYWOŁANA z loginem:', loginPracownika);
+
+  pendingRegistrationData = afterCallback;
+
+  // 1) Jeśli jesteśmy w Google Script (demo / stare środowisko) — zostawiamy stary tryb
+  if (typeof google !== 'undefined' && google.script) {
     google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.success && result.announcements.length > 0) {
-                pendingAnnouncements = result.announcements;
-                currentAnnouncementIndex = 0;
-                showCurrentAnnouncement();
-            } else {
-                // Brak ogłoszeń - kontynuuj rejestrację
-                if (pendingRegistrationData) {
-                    pendingRegistrationData();
-                    pendingRegistrationData = null;
-                }
-            }
-        })
-        .withFailureHandler(function(error) {
-            console.error('Błąd sprawdzania ogłoszeń:', error);
-            // W razie błędu kontynuuj rejestrację
-            if (pendingRegistrationData) {
-                pendingRegistrationData();
-                pendingRegistrationData = null;
-            }
-        })
-        .getUnreadAnnouncements(loginPracownika);
+      .withSuccessHandler(function(result) {
+        if (result.success && result.announcements.length > 0) {
+          pendingAnnouncements = result.announcements;
+          currentAnnouncementIndex = 0;
+          showCurrentAnnouncement();
+        } else {
+          if (pendingRegistrationData) {
+            pendingRegistrationData();
+            pendingRegistrationData = null;
+          }
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('Błąd sprawdzania ogłoszeń:', error);
+        if (pendingRegistrationData) {
+          pendingRegistrationData();
+          pendingRegistrationData = null;
+        }
+      })
+      .getUnreadAnnouncements(loginPracownika);
+
+    return;
+  }
+
+  // 2) TRYB PAGES/API
+  apiGetUnreadAnnouncements(loginPracownika)
+    .then((announcements) => {
+      if (Array.isArray(announcements) && announcements.length > 0) {
+        pendingAnnouncements = announcements;
+        currentAnnouncementIndex = 0;
+        showCurrentAnnouncement();
+      } else {
+        if (pendingRegistrationData) {
+          pendingRegistrationData();
+          pendingRegistrationData = null;
+        }
+      }
+    })
+    .catch((error) => {
+      console.error('Błąd sprawdzania ogłoszeń (API):', error);
+      if (pendingRegistrationData) {
+        pendingRegistrationData();
+        pendingRegistrationData = null;
+      }
+    });
 }
 
 function showCurrentAnnouncement() {
@@ -11298,11 +11349,18 @@ function markAsReadAndContinue() {
     
     removeAnnouncementFromCache(ann.id);
     
+      // Google Script (stary tryb)
+  if (typeof google !== 'undefined' && google.script) {
     google.script.run
-        .withFailureHandler(function(error) {
-            console.error('Błąd oznaczania odczytu:', error);
-        })
-        .markAnnouncementAsRead(ann.id, loginPracownika);
+      .withFailureHandler(function(error) {
+        console.error('Błąd oznaczania odczytu:', error);
+      })
+      .markAnnouncementAsRead(ann.id, loginPracownika);
+  } else {
+    // Pages/API
+    apiMarkAnnouncementAsRead(ann.id, loginPracownika)
+      .catch((error) => console.error('Błąd oznaczania odczytu (API):', error));
+  }
     
     currentAnnouncementIndex++;
     showCurrentAnnouncement();
