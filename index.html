@@ -9481,34 +9481,89 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
 
             // ===== TRYB API (bez Google Apps Script) =====
             showNotification('⏳ Wysyłam do API...', 'info');
-
+            
             apiScan(cleanCode)
               .then((data) => {
-                // Przykład: { success:true, user:"...", action:"BREAK_END", status:"WORKING", message:"..." }
                 const statusEl = document.getElementById('statusInfo');
-
+            
+                // Info w pasku (zostawiamy, bo już działa)
                 const line =
                   (data.user ? data.user : '') +
                   (data.action ? ` • ${data.action}` : '') +
                   (data.status ? ` • ${data.status}` : '');
-
                 if (statusEl) statusEl.textContent = line || (data.message || 'OK');
-
+            
+                // Jeśli API zwróci błąd — kończymy
                 if (data.success === false) {
                   showNotification(data.message || '❌ Odrzucono', 'error');
-                } else {
-                  showNotification(data.message || '✅ Zapisano', 'success');
+                  return;
                 }
-
-                  showConfirmationModalApi(data);
+            
+                // ✅ SUKCES: skan ma tylko ustawić kontekst + sprawdzić ogłoszenia + wejść w panel operatora
+                // Oczekujemy po tym kroku: data.login, data.name, data.status, data.currentDepartment
+                currentUser = {
+                  login: data.login,
+                  name: data.name,
+                  status: data.status // ważne, bo proceedToActionView w DBK mapuje status
+                };
+            
+                currentDepartment = data.currentDepartment || null;
+            
+                // Potrzebne do systemu ogłoszeń (markAsReadAndContinue używa tego loginu)
+                sessionStorage.setItem('currentEmployeeLogin', currentUser.login);
+            
+                // Funkcja 1:1 jak DBK — wejście do panelu operatora
+                function proceedToActionViewApi() {
+                  // mapowanie statusu na workerState (1:1 jak w proceedToActionView w pliku)
+                  if (currentUser.status === 'Pracuje') {
+                    workerState = 'logged-in-working';
+                    userStatuses[currentUser.login] = 'logged-in-working';
+                  } else if (currentUser.status === 'Na przerwie') {
+                    workerState = 'logged-in-on-break';
+                    userStatuses[currentUser.login] = 'logged-in-on-break';
+                  } else {
+                    workerState = 'not-logged-in';
+                    userStatuses[currentUser.login] = 'not-logged-in';
+                  }
+            
+                  isLoggedIn = true;
+            
+                  document.getElementById('welcomeHeader').classList.remove('show');
+            
+                  const deptLabel = (data.departmentName || currentDepartment || '').toString().trim();
+                  document.getElementById('actionViewTitle').textContent =
+                    `Panel operatora - ${currentUser.login}${deptLabel ? ` (${deptLabel})` : ''}`;
+            
+                  showView('action');
+                  updateButtonStates();
+                  updateMyTicketsTileInActionView();
+            
+                  showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
+                }
+            
+                // ✅ Ogłoszenia przed panelem
+                // Jeśli API zwróci announcements[] -> użyjemy tego bez dodatkowego calla
+                if (Array.isArray(data.announcements)) {
+                  if (data.announcements.length > 0) {
+                    pendingAnnouncements = data.announcements;
+                    currentAnnouncementIndex = 0;
+                    pendingRegistrationData = proceedToActionViewApi;
+                    showCurrentAnnouncement();
+                  } else {
+                    proceedToActionViewApi();
+                  }
+                  return;
+                }
+            
+                // Jeśli API NIE zwraca announcements -> użyj istniejącej funkcji checkForAnnouncements (przerobimy ją w kroku 2)
+                checkForAnnouncements(currentUser.login, proceedToActionViewApi);
               })
               .catch((err) => {
                 console.error(err);
                 showNotification('❌ Błąd API: ' + (err?.message || err), 'error');
               });
-
-            return; // <- ważne: nie lecimy dalej w starą logikę (departments/google.script.run)
             
+            return; // <- zostaje! dalej nie wchodzimy w starą logikę departments/google.script.run
             let foundUser = null;
             let foundDepartment = null;
 
