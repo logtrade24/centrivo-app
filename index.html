@@ -3625,6 +3625,20 @@ async function apiScan(code){
   return data.announcements || [];
 }
 
+    async function apiLookupEmployeeByCode(code){
+  const r = await fetch(`${API_BASE}/employee/by-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(data?.message || `HTTP ${r.status}`);
+  }
+  return data;
+}
+
 async function apiMarkAnnouncementAsRead(id, login){
   const r = await fetch(`${API_BASE}/announcements/mark-read`, {
     method: 'POST',
@@ -8918,22 +8932,28 @@ function updateTopBarButton() {
             //const departmentTiles = document.querySelectorAll('#departmentView .tile');
             //departmentTiles.forEach(tile => tile.style.opacity = '0.3');
             
-            if (typeof google === 'undefined' || !google.script) {
-                departments = {
-                    'przyjecie': {
-                        name: 'Przyjęcie dostaw',
-                        users: [
-                            { login: 'rafalk5', code: '1233727088163', name: 'Rafał test' },
-                            { login: 'jerzyd', code: '1236737459372', name: 'Jerzy Dwurznik' }
-                        ]
-                    }
-                };
-                //departmentTiles.forEach(tile => tile.style.opacity = '1');
-                showNotification('Tryb testowy', 'info');
-                return;
+           if (typeof google === 'undefined' || !google.script) {
+              departments = {
+                'przyjecie': {
+                  name: 'Przyjęcie dostaw',
+                  users: [
+                    { login: 'rafalk5', code: '1233727088163', name: 'Rafał test' },
+                    { login: 'jerzyd', code: '1236737459372', name: 'Jerzy Dwurznik' }
+                  ]
+                }
+              };
+            
+              const cs = document.getElementById('connectionStatus');
+              if (cs) {
+                cs.textContent = 'Tryb Pages (API)';
+                cs.style.color = '#fbbf24';
+              }
+            
+              showNotification('Tryb testowy', 'info');
+              return;
             }
             
-            google.script.run
+            google.script.run ...
                 .withSuccessHandler(function(data) {
                     departments = data;
                     console.log('Załadowano pracowników z arkusza:', departments);
@@ -9508,17 +9528,17 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
             // ===== TRYB API (bez Google Apps Script) =====
             showNotification('⏳ Wysyłam do API...', 'info');
             
-            apiScan(cleanCode)
+            apiLookupEmployeeByCode(cleanCode)
               .then((data) => {
                 const statusEl = document.getElementById('statusInfo');
             
                 // Info w pasku (zostawiamy, bo już działa)
                 const line =
-                  (data.user ? data.user : '') +
-                  (data.action ? ` • ${data.action}` : '') +
+                  (data.login ? data.login : '') +
+                  (data.name ? ` • ${data.name}` : '') +
                   (data.status ? ` • ${data.status}` : '');
                 if (statusEl) statusEl.textContent = line || (data.message || 'OK');
-            
+
                 // Jeśli API zwróci błąd — kończymy
                 if (data.success === false) {
                   showNotification(data.message || '❌ Odrzucono', 'error');
