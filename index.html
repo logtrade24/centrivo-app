@@ -3612,6 +3612,32 @@ async function apiScan(code){
   return data;
 }
 
+    async function apiScanIntent(intent, extra){
+  const code = sessionStorage.getItem('currentEmployeeCode');
+
+  if (!code) {
+    throw new Error('Brak kodu pracownika. Zeskanuj identyfikator jeszcze raz.');
+  }
+
+  const payload = {
+    code,
+    intent,
+    ...(extra && typeof extra === 'object' ? extra : {})
+  };
+
+  const r = await fetch(`${API_BASE}/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(data?.message || `HTTP ${r.status}`);
+  }
+  return data;
+}
+
     async function apiGetUnreadAnnouncements(login){
   const r = await fetch(`${API_BASE}/announcements/unread`, {
     method: 'POST',
@@ -6181,15 +6207,17 @@ window.selectDepartment = function(deptId) {
         // ===== FUNKCJA OBSŁUGI AKCJI =====
         window.handleAction = function(action) {
         loadSavedTheme(); // Zastosuj dark mode
-    const button = document.getElementById(action + '-btn');
-    if (button && button.classList.contains('disabled')) {
-        return;
-    }
-
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('pl-PL');
+        const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+            
+        const button = document.getElementById(action + '-btn');
+        if (button && button.classList.contains('disabled')) {
+            return;
+        }
     
-    document.getElementById('lastActivity').textContent = timeString;
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('pl-PL');
+        
+        document.getElementById('lastActivity').textContent = timeString;
     
     // ===== WCHODZĘ DO PRACY =====
     if (action === 'wchodzi') {
@@ -6214,8 +6242,16 @@ window.selectDepartment = function(deptId) {
             ensureCodeInputFocus();
         }, 300);
         
-        // 2. W TLE - zapisz do arkusza
-        sendToSpreadsheetAsync(userToSave, deptToSave, action);
+        // 2. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
+        if (!hasAppsScript) {
+          apiScanIntent('ENTRY', { department: deptToSave })
+            .catch(err => {
+              console.error('❌ ENTRY API error:', err);
+              showNotification('❌ Błąd zapisu ENTRY: ' + (err?.message || err), 'error');
+            });
+        } else {
+          sendToSpreadsheetAsync(userToSave, deptToSave, action);
+        }
         return;
     }
     
@@ -6242,8 +6278,16 @@ window.selectDepartment = function(deptId) {
             ensureCodeInputFocus();
         }, 300);
         
-        // 2. W TLE - zapisz do arkusza
-        sendToSpreadsheetAsync(userToSave, deptToSave, 'wychodzi-pracy');
+        // 2. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
+        if (!hasAppsScript) {
+          apiScanIntent('EXIT', { department: deptToSave })
+            .catch(err => {
+              console.error('❌ EXIT API error:', err);
+              showNotification('❌ Błąd zapisu EXIT: ' + (err?.message || err), 'error');
+            });
+        } else {
+          sendToSpreadsheetAsync(userToSave, deptToSave, 'wychodzi-pracy');
+        }
         return;
     }
     
@@ -9524,6 +9568,8 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
             
             const cleanCode = code.toString().replace(/^~+/, '').replace(/~+$/, '').trim();
             console.log('Kod po oczyszczeniu:', cleanCode);
+            
+            sessionStorage.setItem('currentEmployeeCode', cleanCode);
 
             // ===== TRYB API (bez Google Apps Script) =====
             showNotification('⏳ Wysyłam do API...', 'info');
@@ -10366,9 +10412,30 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         ensureCodeInputFocus();
     }, 300);
     
-    // 3. W TLE - zapisz do arkusza
-    sendToSpreadsheetAsync(userToSave, deptToSave, action);
-});
+    // 3. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
+    const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+    
+    if (!hasAppsScript) {
+      const intentMap = {
+        'wychodzi-przerwa': 'BREAK_START',
+        'wracam': 'BREAK_END'
+      };
+    
+      const intent = intentMap[action];
+      if (!intent) {
+        console.error('❌ Unknown break action:', action);
+        return;
+      }
+    
+      apiScanIntent(intent, { department: deptToSave })
+        .catch(err => {
+          console.error('❌ BREAK API error:', err);
+          showNotification('❌ Błąd zapisu przerwy: ' + (err?.message || err), 'error');
+        });
+    } else {
+      sendToSpreadsheetAsync(userToSave, deptToSave, action);
+    }
+    });
 
         // ===== PANEL ZGŁOSZEŃ KIEROWNIKA =====
 
