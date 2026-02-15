@@ -3613,6 +3613,18 @@ async function apiScan(code){
   return data;
 }
 
+    async function apiAddTimeEntry(payload){
+  const r = await fetch(`${API_BASE}/time-entry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
   // ===== OPTYMALIZACJA - NATYCHMIASTOWA REAKCJA UI =====
 
 /**
@@ -4845,30 +4857,49 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
     timestamp: new Date().toISOString()
   };
 
-  console.log('📤 Wysyłanie async do arkusza:', data);
+  console.log('📤 Wysyłanie async:', data);
 
-  // Najpierw: natychmiastowa zmiana w UI (Sprint-style)
-  optimisticUpdateLiveWorkforce(data);
+  const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
 
-  // Tryb testowy (bez backendu)
-  if (typeof google === 'undefined' || !google.script) {
-    console.log('⚠️ Tryb testowy - brak backendu');
-    if (callback) callback({ success: true, message: 'Tryb testowy' });
+  // ===== TRYB CLOUDFLARE PAGES (API) =====
+  if (!hasAppsScript) {
+    apiAddTimeEntry(data)
+      .then((result) => {
+        console.log('✅ Zapisano przez API:', result);
+
+        // ✅ dopiero po sukcesie zmieniamy UI (żeby COFNIJ działało logicznie)
+        optimisticUpdateLiveWorkforce(data);
+
+        if (callback) callback(result);
+
+        // dosynchronizuj “live”
+        setTimeout(refreshLiveWorkforce, 200);
+        setTimeout(refreshLiveWorkforce, 1500);
+      })
+      .catch((error) => {
+        console.error('❌ Błąd API zapisu:', error);
+        if (callback) callback({ success: false, message: (error && error.message) ? error.message : 'Błąd zapisu API' });
+
+        // jak się nie udało, nie robimy optimistic update
+        setTimeout(refreshLiveWorkforce, 400);
+      });
+
     return;
   }
 
+  // ===== TRYB APPS SCRIPT (stary DBK) =====
   google.script.run
     .withSuccessHandler(function(result) {
       console.log('✅ Zapisano w arkuszu:', result);
+
+      // ✅ dopiero po sukcesie zmieniamy UI
+      optimisticUpdateLiveWorkforce(data);
+
       if (callback) callback(result);
 
-      // Dosynchronizuj stan po zapisie (arkusz potrafi mieć lag)
-      // 1) szybko (inni pracownicy też mogą klikać)
       setTimeout(refreshLiveWorkforce, 200);
-      // 2) drugi strzał po chwili, żeby złapać zapis po flushu
       setTimeout(refreshLiveWorkforce, 1500);
 
-      // Odśwież dane działów w tle (nie blokuje UI)
       google.script.run
         .withSuccessHandler(function(updatedData) {
           departments = updatedData;
@@ -4882,7 +4913,6 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
       console.error('❌ Błąd zapisu:', error);
       if (callback) callback({ success: false, message: (error && error.message) ? error.message : 'Błąd zapisu' });
 
-      // Jak zapis się nie udał, to chociaż dosynchronizuj z backendu
       setTimeout(refreshLiveWorkforce, 400);
     })
     .addTimeEntry(data.login, data.department, data.action, data.timestamp);
