@@ -38,7 +38,7 @@ Wersja: 2.0
           border-bottom: 1px solid #e9ecef;
           font-size: 14px;
           color: #495057;
-
+        
           display:flex;
           align-items:center;
           gap: 12px;
@@ -73,18 +73,21 @@ Wersja: 2.0
         }
 
         .status-button {
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    position: relative;
-    min-width: 100px;
-}
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            min-width: 100px;
+        }
+
+        .session-info{ position: relative; z-index: 2; }
+        .status-right{ position: relative; z-index: 1; }
 
 .status-button:hover {
     transform: translateY(-2px);
@@ -201,31 +204,30 @@ Wersja: 2.0
     align-items: center;   /* wyrównanie w pionie */
     gap: 12px;
 }
-
-       /* Zegar + data: bez przesuwania right/top, zawsze w obrębie paska */
-      .session-info{
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        text-align:center;
-        white-space: nowrap;
-        flex: 0 0 auto;
-      }
-
-      .current-time{
-        font-weight: 900;
-        font-size: 20px;
-        display:flex;
-        align-items:center;
-        gap: 8px;
-        color: inherit; /* ważne: w jasnym trybie ma być widoczny */
-      }
-
-      .current-date{
-        opacity: .85;
-        color: inherit; /* ważne: w jasnym trybie ma być widoczny */
-      }
+        /* Zegar + data: bez przesuwania right/top, zawsze w obrębie paska */
+        .session-info{
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          justify-content:center;
+          text-align:center;
+          white-space: nowrap;
+          flex: 0 0 auto;
+        }
+        
+        .current-time{
+          font-weight: 900;
+          font-size: 20px;
+          display:flex;
+          align-items:center;
+          gap: 8px;
+          color: inherit; /* ważne: w jasnym trybie ma być widoczny */
+        }
+        
+        .current-date{
+          opacity: .85;
+          color: inherit; /* ważne: w jasnym trybie ma być widoczny */
+        }
 
         .main-container {
             flex: 1;
@@ -2542,7 +2544,7 @@ body.modal-open{
         >
       </div>
       
-      <button onclick="handleLogin()" class="login-button">
+      <button onclick="localLogin()" class="login-button">
         <span>🔓</span>
         <span>Zaloguj się</span>
       </button>
@@ -3538,6 +3540,116 @@ body.modal-open{
     </div>
 
 <script>
+  // ===== API (Cloudflare Pages -> Render) =====
+const API_BASE = 'https://api.centrivo.pl';
+
+function formatPlDateTime(ts){
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return String(ts);
+  return d.toLocaleString('pl-PL', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+function showConfirmationModalApi(payload) {
+  const modal = document.getElementById('confirmationModal');
+  const title = document.getElementById('confirmationTitle');
+  const message = document.getElementById('confirmationMessage');
+  const timestampEl = document.getElementById('confirmationTimestamp');
+  const actionEl = document.getElementById('confirmationAction');
+
+  if (!modal || !title || !message || !timestampEl || !actionEl) return;
+
+  const who =
+    payload?.name ||
+    payload?.employeeName ||
+    payload?.employeeId ||
+    payload?.user?.login ||
+    payload?.user ||
+    payload?.login ||
+    'OK';
+
+  const rawAction = payload?.action || payload?.type || payload?.event || payload?.lastAction || 'scan';
+  const actionKey = String(rawAction).trim().toUpperCase();
+
+
+  const humanActionMap = {
+    // kody z API / arkusza
+    'ENTRY': 'Wchodzę',
+    'EXIT': 'Wychodzę z pracy',
+    'BREAK_START': 'Wychodzę na przerwę',
+    'BREAK_END': 'Wracam z przerwy',
+  };
+
+  const tsRaw = payload?.timestamp || payload?.time || payload?.dateTime || '';
+  const ts = formatPlDateTime(tsRaw);
+
+  title.textContent = `BRAWO ${String(who).toUpperCase()}!`;
+  message.textContent = payload?.message || 'Zapisano.';
+  timestampEl.textContent = ts ? `czas: ${ts}` : 'czas: -';
+  actionEl.textContent = humanActionMap[actionKey] || String(rawAction);
+  modal.setAttribute('data-action', String(actionKey));
+  modal.classList.add('show');
+}
+
+async function apiScan(code){
+  const r = await fetch(`${API_BASE}/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(data?.message || `HTTP ${r.status}`);
+  }
+  return data;
+}
+
+    async function apiGetUnreadAnnouncements(login){
+  const r = await fetch(`${API_BASE}/announcements/unread`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+
+  return data.announcements || [];
+}
+
+async function apiMarkAnnouncementAsRead(id, login){
+  const r = await fetch(`${API_BASE}/announcements/mark-read`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, login })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+
+  return data;
+}
+
+    async function apiAddTimeEntry(payload){
+  const r = await fetch(`${API_BASE}/time-entry`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
   // ===== OPTYMALIZACJA - NATYCHMIASTOWA REAKCJA UI =====
 
 /**
@@ -4770,30 +4882,49 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
     timestamp: new Date().toISOString()
   };
 
-  console.log('📤 Wysyłanie async do arkusza:', data);
+  console.log('📤 Wysyłanie async:', data);
 
-  // Najpierw: natychmiastowa zmiana w UI (Sprint-style)
-  optimisticUpdateLiveWorkforce(data);
+  const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
 
-  // Tryb testowy (bez backendu)
-  if (typeof google === 'undefined' || !google.script) {
-    console.log('⚠️ Tryb testowy - brak backendu');
-    if (callback) callback({ success: true, message: 'Tryb testowy' });
+  // ===== TRYB CLOUDFLARE PAGES (API) =====
+  if (!hasAppsScript) {
+    apiAddTimeEntry(data)
+      .then((result) => {
+        console.log('✅ Zapisano przez API:', result);
+
+        // ✅ dopiero po sukcesie zmieniamy UI (żeby COFNIJ działało logicznie)
+        optimisticUpdateLiveWorkforce(data);
+
+        if (callback) callback(result);
+
+        // dosynchronizuj “live”
+        setTimeout(refreshLiveWorkforce, 200);
+        setTimeout(refreshLiveWorkforce, 1500);
+      })
+      .catch((error) => {
+        console.error('❌ Błąd API zapisu:', error);
+        if (callback) callback({ success: false, message: (error && error.message) ? error.message : 'Błąd zapisu API' });
+
+        // jak się nie udało, nie robimy optimistic update
+        setTimeout(refreshLiveWorkforce, 400);
+      });
+
     return;
   }
 
+  // ===== TRYB APPS SCRIPT (stary DBK) =====
   google.script.run
     .withSuccessHandler(function(result) {
       console.log('✅ Zapisano w arkuszu:', result);
+
+      // ✅ dopiero po sukcesie zmieniamy UI
+      optimisticUpdateLiveWorkforce(data);
+
       if (callback) callback(result);
 
-      // Dosynchronizuj stan po zapisie (arkusz potrafi mieć lag)
-      // 1) szybko (inni pracownicy też mogą klikać)
       setTimeout(refreshLiveWorkforce, 200);
-      // 2) drugi strzał po chwili, żeby złapać zapis po flushu
       setTimeout(refreshLiveWorkforce, 1500);
 
-      // Odśwież dane działów w tle (nie blokuje UI)
       google.script.run
         .withSuccessHandler(function(updatedData) {
           departments = updatedData;
@@ -4807,7 +4938,6 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
       console.error('❌ Błąd zapisu:', error);
       if (callback) callback({ success: false, message: (error && error.message) ? error.message : 'Błąd zapisu' });
 
-      // Jak zapis się nie udał, to chociaż dosynchronizuj z backendu
       setTimeout(refreshLiveWorkforce, 400);
     })
     .addTimeEntry(data.login, data.department, data.action, data.timestamp);
@@ -4822,83 +4952,55 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 function checkSession() {
-  const sessionLogin = sessionStorage.getItem('isLoggedIn');
-  const loggedInUser = sessionStorage.getItem('loggedInUser');
+  // 🔥 Cloudflare Pages: zawsze pokazuj rejestrator (bez logowania Apps Script)
+  isLoggedIn = true;
 
-  const loginScreen = document.getElementById('loginScreen');
-  const mainInterface = document.getElementById('mainInterface');
+  var loginScreen = document.getElementById('loginScreen');
+  var mainInterface = document.getElementById('mainInterface');
 
-  if (sessionLogin === 'true') {
-    isLoggedIn = true;
+  if (loginScreen) loginScreen.style.display = 'none';
+  if (mainInterface) mainInterface.style.display = 'block';
 
-    // pokaż główny widok
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainInterface) mainInterface.style.display = 'block';
+  if (typeof showView === 'function') showView('department');
+  setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
+}
 
-    // przyciski kierownika
-    if (loggedInUser === 'jerzyd') {
-      document.getElementById('dashboardBtn').style.display = 'inline-block';
-      document.getElementById('announcementsBtn').style.display = 'inline-block';
-      document.getElementById('workforcePlannerBtn').style.display = 'inline-block';
-      document.getElementById('workforceLiveBtn').style.display = 'inline-block';
-    } else {
-      document.getElementById('dashboardBtn').style.display = 'none';
-      document.getElementById('announcementsBtn').style.display = 'none';
-      document.getElementById('workforcePlannerBtn').style.display = 'none';
-      document.getElementById('workforceLiveBtn').style.display = 'none';
-    }
+    function localLogin(){
+  sessionStorage.setItem('isLoggedIn', 'true');
+  isLoggedIn = true;
 
-    // rzeczy “startowe”
-    preloadAllAnnouncementsCache();
-    updateTicketsNotificationBadge();
-    startAutoRefresh();
+  const ls = document.getElementById('loginScreen');
+  const mi = document.getElementById('mainInterface');
 
-    // 🔒 po refresh przeglądarka lubi trzymać fokus na ukrytym login/password
-    const loginInput = document.getElementById('loginInput');
-    const passwordInput = document.getElementById('passwordInput');
-    if (loginInput) loginInput.blur();
-    if (passwordInput) passwordInput.blur();
-    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  if (ls) ls.style.display = 'none';
+  if (mi) mi.style.display = 'block';
 
-    // upewnij się, że jesteśmy w głównym widoku aplikacji
-    if (typeof showView === 'function') {
-      showView('department');
-    }
+  if (typeof showView === 'function') showView('department');
+  setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
 
-    // kilka prób, bo UI/tiles dorysowują się asynchronicznie
-    requestAnimationFrame(() => {
-      focusEanInput();
-      requestAnimationFrame(focusEanInput);
-    });
-
-    setTimeout(focusEanInput, 80);
-    setTimeout(focusEanInput, 250);
-    setTimeout(focusEanInput, 600);
-
-  } else {
-    isLoggedIn = false;
-
-    if (loginScreen) loginScreen.style.display = 'block';
-    if (mainInterface) mainInterface.style.display = 'none';
-
-    setTimeout(() => {
-      const li = document.getElementById('loginInput');
-      if (li) li.focus();
-    }, 100);
-  }
+  // czyścimy ewentualny komunikat błędu logowania
+  const err = document.getElementById('loginError');
+  if (err) { err.textContent = ''; err.style.display = 'none'; }
 }
 
 function handleLogin() {
+  // Jeśli jesteśmy na Pages (brak Apps Script) -> logowanie lokalne
+  const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+  if (!hasAppsScript) {
+    localLogin();
+    return;
+  }
+
   const login = document.getElementById('loginInput').value.trim();
   const password = document.getElementById('passwordInput').value;
   const errorDiv = document.getElementById('loginError');
-  
+
   if (!login || !password) {
     errorDiv.textContent = '⚠️ Wypełnij wszystkie pola!';
     errorDiv.style.display = 'block';
     return;
   }
-  
+
   google.script.run
     .withSuccessHandler(function(response) {
       if (response.success) {
@@ -4907,18 +5009,18 @@ function handleLogin() {
         sessionStorage.setItem('isLoggedIn', 'true');
         sessionStorage.setItem('loggedInUser', login);
         isLoggedIn = true;
-        
+
         // Schowaj ekran logowania, pokaż interfejs
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainInterface').style.display = 'block';
         errorDiv.style.display = 'none';
-        
+
         // Załaduj dane + UI
         loadDepartmentsFromSpreadsheet();
         updateTime();
         updateTicketsNotificationBadge();
         startAutoRefresh();
-        
+
         // Pokaż przyciski tylko dla kierownika
         if (response.isManager) {
           document.getElementById('dashboardBtn').style.display = 'inline-block';
@@ -4932,11 +5034,10 @@ function handleLogin() {
           document.getElementById('workforceLiveBtn').style.display = 'none';
         }
 
-        // ✅ Fokus na pole skanowania EAN (dla wszystkich)
+        // Fokus na pole skanowania EAN
         focusEanInput();
 
       } else {
-        // Błąd logowania
         errorDiv.textContent = response.message;
         errorDiv.style.display = 'block';
       }
@@ -4955,13 +5056,13 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (loginInput) {
     loginInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') handleLogin();
+      if (e.key === 'Enter') localLogin();
     });
   }
   
   if (passwordInput) {
     passwordInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') handleLogin();
+      if (e.key === 'Enter') localLogin();
     });
   }
 });
@@ -9247,6 +9348,82 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
             modal.classList.add('show');
         }
 
+    function showConfirmationModalApi(data) {
+  const modal = document.getElementById('confirmationModal');
+  const title = document.getElementById('confirmationTitle');
+  const message = document.getElementById('confirmationMessage');
+  const timestampEl = document.getElementById('confirmationTimestamp');
+  const actionEl = document.getElementById('confirmationAction');
+
+  if (!modal || !title || !message || !timestampEl || !actionEl) return;
+
+  const userLogin =
+    (data && data.user && typeof data.user === 'object' ? data.user.login : null) ||
+    (data && data.user ? data.user : null) ||
+    data?.login ||
+    data?.userLogin ||
+    'OK';
+
+  const action = data?.action || data?.type || data?.event || 'scan';
+  const ts = data?.timestamp || data?.time || data?.dateTime || '';
+
+  const humanActionMap = {
+    'wychodzi-przerwa': 'Wychodzę na przerwę',
+    'wracam': 'Wracam z przerwy',
+    'wchodzi': 'Wchodzę',
+    'wychodzi-pracy': 'Wychodzę z pracy',
+    'zmieniam-operacje': 'Zmieniam operację',
+    // jeśli backend zwraca inne kody:
+    'BREAK_START': 'Wychodzę na przerwę',
+    'BREAK_END': 'Wracam z przerwy',
+    'IN': 'Wchodzę',
+    'OUT': 'Wychodzę z pracy'
+  };
+
+  title.textContent = `BRAWO ${userLogin}!`;
+  message.textContent = data?.message || 'Zapisano.';
+  timestampEl.textContent = ts ? `czas: ${ts}` : 'czas: -';
+  actionEl.textContent = humanActionMap[action] || String(action);
+
+  modal.setAttribute('data-action', String(action));
+  modal.classList.add('show');
+}
+
+    function showConfirmationModalApi(data) {
+  const modal = document.getElementById('confirmationModal');
+  const title = document.getElementById('confirmationTitle');
+  const message = document.getElementById('confirmationMessage');
+  const timestampEl = document.getElementById('confirmationTimestamp');
+  const actionEl = document.getElementById('confirmationAction');
+  if (!modal || !title || !message || !timestampEl || !actionEl) return;
+
+  const userLogin =
+    (data && data.user && typeof data.user === 'object' ? data.user.login : null) ||
+    (data && typeof data.user === 'string' ? data.user : null) ||
+    data?.employeeId ||
+    data?.login ||
+    'OK';
+
+  const action = data?.type || data?.action || data?.event || 'SCAN';
+  const iso = data?.timestamp || data?.time || '';
+  const ts = iso ? new Date(iso).toLocaleString('pl-PL') : '-';
+
+  const map = {
+    IN: 'Wchodzę',
+    OUT: 'Wychodzę z pracy',
+    BREAK_START: 'Wychodzę na przerwę',
+    BREAK_END: 'Wracam z przerwy'
+  };
+
+  title.textContent = `BRAWO ${userLogin}!`;
+  message.textContent = data?.message || 'Zapisano.';
+  timestampEl.textContent = `czas: ${ts}`;
+  actionEl.textContent = map[action] || String(action);
+
+  modal.setAttribute('data-action', String(action));
+  modal.classList.add('show');
+}
+
         function getStatusColor(status) {
             switch(status) {
                 case 'Zatwierdzony': return '#28a745';
@@ -9327,7 +9504,92 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
             
             const cleanCode = code.toString().replace(/^~+/, '').replace(/~+$/, '').trim();
             console.log('Kod po oczyszczeniu:', cleanCode);
+
+            // ===== TRYB API (bez Google Apps Script) =====
+            showNotification('⏳ Wysyłam do API...', 'info');
             
+            apiScan(cleanCode)
+              .then((data) => {
+                const statusEl = document.getElementById('statusInfo');
+            
+                // Info w pasku (zostawiamy, bo już działa)
+                const line =
+                  (data.user ? data.user : '') +
+                  (data.action ? ` • ${data.action}` : '') +
+                  (data.status ? ` • ${data.status}` : '');
+                if (statusEl) statusEl.textContent = line || (data.message || 'OK');
+            
+                // Jeśli API zwróci błąd — kończymy
+                if (data.success === false) {
+                  showNotification(data.message || '❌ Odrzucono', 'error');
+                  return;
+                }
+            
+                // ✅ SUKCES: skan ma tylko ustawić kontekst + sprawdzić ogłoszenia + wejść w panel operatora
+                // Oczekujemy po tym kroku: data.login, data.name, data.status, data.currentDepartment
+                currentUser = {
+                  login: data.login,
+                  name: data.name,
+                  status: data.status // ważne, bo proceedToActionView w DBK mapuje status
+                };
+            
+                currentDepartment = data.currentDepartment || null;
+            
+                // Potrzebne do systemu ogłoszeń (markAsReadAndContinue używa tego loginu)
+                sessionStorage.setItem('currentEmployeeLogin', currentUser.login);
+            
+                // Funkcja 1:1 jak DBK — wejście do panelu operatora
+                function proceedToActionViewApi() {
+                  // mapowanie statusu na workerState (1:1 jak w proceedToActionView w pliku)
+                  if (currentUser.status === 'Pracuje') {
+                    workerState = 'logged-in-working';
+                    userStatuses[currentUser.login] = 'logged-in-working';
+                  } else if (currentUser.status === 'Na przerwie') {
+                    workerState = 'logged-in-on-break';
+                    userStatuses[currentUser.login] = 'logged-in-on-break';
+                  } else {
+                    workerState = 'not-logged-in';
+                    userStatuses[currentUser.login] = 'not-logged-in';
+                  }
+            
+                  isLoggedIn = true;
+            
+                  document.getElementById('welcomeHeader').classList.remove('show');
+            
+                  const deptLabel = (data.departmentName || currentDepartment || '').toString().trim();
+                  document.getElementById('actionViewTitle').textContent =
+                    `Panel operatora - ${currentUser.login}${deptLabel ? ` (${deptLabel})` : ''}`;
+            
+                  showView('action');
+                  updateButtonStates();
+                  updateMyTicketsTileInActionView();
+            
+                  showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
+                }
+            
+                // ✅ Ogłoszenia przed panelem
+                // Jeśli API zwróci announcements[] -> użyjemy tego bez dodatkowego calla
+                if (Array.isArray(data.announcements)) {
+                  if (data.announcements.length > 0) {
+                    pendingAnnouncements = data.announcements;
+                    currentAnnouncementIndex = 0;
+                    pendingRegistrationData = proceedToActionViewApi;
+                    showCurrentAnnouncement();
+                  } else {
+                    proceedToActionViewApi();
+                  }
+                  return;
+                }
+            
+                // Jeśli API NIE zwraca announcements -> użyj istniejącej funkcji checkForAnnouncements (przerobimy ją w kroku 2)
+                checkForAnnouncements(currentUser.login, proceedToActionViewApi);
+              })
+              .catch((err) => {
+                console.error(err);
+                showNotification('❌ Błąd API: ' + (err?.message || err), 'error');
+              });
+            
+            return; // <- zostaje! dalej nie wchodzimy w starą logikę departments/google.script.run
             let foundUser = null;
             let foundDepartment = null;
 
@@ -10981,33 +11243,58 @@ let currentAnnouncementIndex = 0;
 let pendingRegistrationData = null;
 
 function checkForAnnouncements(loginPracownika, afterCallback) {
-    console.log('🔔 checkForAnnouncements WYWOŁANA z loginem:', loginPracownika);
-    
-    pendingRegistrationData = afterCallback;
-    
+  console.log('🔔 checkForAnnouncements WYWOŁANA z loginem:', loginPracownika);
+
+  pendingRegistrationData = afterCallback;
+
+  // 1) Jeśli jesteśmy w Google Script (demo / stare środowisko) — zostawiamy stary tryb
+  if (typeof google !== 'undefined' && google.script) {
     google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.success && result.announcements.length > 0) {
-                pendingAnnouncements = result.announcements;
-                currentAnnouncementIndex = 0;
-                showCurrentAnnouncement();
-            } else {
-                // Brak ogłoszeń - kontynuuj rejestrację
-                if (pendingRegistrationData) {
-                    pendingRegistrationData();
-                    pendingRegistrationData = null;
-                }
-            }
-        })
-        .withFailureHandler(function(error) {
-            console.error('Błąd sprawdzania ogłoszeń:', error);
-            // W razie błędu kontynuuj rejestrację
-            if (pendingRegistrationData) {
-                pendingRegistrationData();
-                pendingRegistrationData = null;
-            }
-        })
-        .getUnreadAnnouncements(loginPracownika);
+      .withSuccessHandler(function(result) {
+        if (result.success && result.announcements.length > 0) {
+          pendingAnnouncements = result.announcements;
+          currentAnnouncementIndex = 0;
+          showCurrentAnnouncement();
+        } else {
+          if (pendingRegistrationData) {
+            pendingRegistrationData();
+            pendingRegistrationData = null;
+          }
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error('Błąd sprawdzania ogłoszeń:', error);
+        if (pendingRegistrationData) {
+          pendingRegistrationData();
+          pendingRegistrationData = null;
+        }
+      })
+      .getUnreadAnnouncements(loginPracownika);
+
+    return;
+  }
+
+  // 2) TRYB PAGES/API
+  apiGetUnreadAnnouncements(loginPracownika)
+    .then((announcements) => {
+      if (Array.isArray(announcements) && announcements.length > 0) {
+        pendingAnnouncements = announcements;
+        currentAnnouncementIndex = 0;
+        showCurrentAnnouncement();
+      } else {
+        if (pendingRegistrationData) {
+          pendingRegistrationData();
+          pendingRegistrationData = null;
+        }
+      }
+    })
+    .catch((error) => {
+      console.error('Błąd sprawdzania ogłoszeń (API):', error);
+      if (pendingRegistrationData) {
+        pendingRegistrationData();
+        pendingRegistrationData = null;
+      }
+    });
 }
 
 function showCurrentAnnouncement() {
@@ -11062,11 +11349,18 @@ function markAsReadAndContinue() {
     
     removeAnnouncementFromCache(ann.id);
     
+      // Google Script (stary tryb)
+  if (typeof google !== 'undefined' && google.script) {
     google.script.run
-        .withFailureHandler(function(error) {
-            console.error('Błąd oznaczania odczytu:', error);
-        })
-        .markAnnouncementAsRead(ann.id, loginPracownika);
+      .withFailureHandler(function(error) {
+        console.error('Błąd oznaczania odczytu:', error);
+      })
+      .markAnnouncementAsRead(ann.id, loginPracownika);
+  } else {
+    // Pages/API
+    apiMarkAnnouncementAsRead(ann.id, loginPracownika)
+      .catch((error) => console.error('Błąd oznaczania odczytu (API):', error));
+  }
     
     currentAnnouncementIndex++;
     showCurrentAnnouncement();
@@ -11657,103 +11951,94 @@ function refreshLiveWorkforce() {
 }
 
         // ===== INICJALIZACJA =====
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM załadowany - inicjalizuję aplikację...');
-
-    loadSavedTheme();
-    updateTime();
-    setInterval(updateTime, 1000);
-    updateButtonStates();
-    loadDepartmentsFromSpreadsheet();
-    setupDepartmentTileBadges();
-    refreshLiveWorkforce();
-
-    
-    // POPRAWKA: Załaduj licznik wniosków urlopowych przy starcie
-    updateManagerNotificationBadge();  // ← DODAJ TĘ LINIĘ!
-    
-    startAutoRefresh();
+            document.addEventListener('DOMContentLoaded', function() {
+              console.log('DOM załadowany - inicjalizuję aplikację...');
             
-            const input = document.getElementById('codeInput');
-            if (input) {
+              loadSavedTheme();
+              updateTime();
+              setInterval(updateTime, 1000);
+              updateButtonStates();
+            
+              const input = document.getElementById('codeInput');
+              if (input) {
                 input.addEventListener('keypress', handleKeyPress);
                 input.addEventListener('input', handleInput);
                 input.focus();
                 console.log('Pole kodu zainicjalizowane');
-            }
-
-            const verificationInput = document.getElementById('verificationCodeInput');
-            if (verificationInput) {
+              }
+            
+              const verificationInput = document.getElementById('verificationCodeInput');
+              if (verificationInput) {
                 verificationInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmUserCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmUserCode();
+                  }
                 });
-            }
-
-            const vacationCodeInput = document.getElementById('vacationVerificationCodeInput');
-            if (vacationCodeInput) {
+              }
+            
+              const vacationCodeInput = document.getElementById('vacationVerificationCodeInput');
+              if (vacationCodeInput) {
                 vacationCodeInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmVacationUserCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmVacationUserCode();
+                  }
                 });
-            }
-
-            const l4VerificationInput = document.getElementById('l4VerificationCodeInput');
-            if (l4VerificationInput) {
+              }
+            
+              const l4VerificationInput = document.getElementById('l4VerificationCodeInput');
+              if (l4VerificationInput) {
                 l4VerificationInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmL4ManagerCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmL4ManagerCode();
+                  }
                 });
-            }
+              }
             
-            const ticketVerificationInput = document.getElementById('ticketVerificationCodeInput');
-            if (ticketVerificationInput) {
+              const ticketVerificationInput = document.getElementById('ticketVerificationCodeInput');
+              if (ticketVerificationInput) {
                 ticketVerificationInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        confirmTicketUserCode();
-                    }
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmTicketUserCode();
+                  }
                 });
-            }
-            const startDateInput = document.getElementById('vacationStartDate');
-            const endDateInput = document.getElementById('vacationEndDate');
+              }
             
-            if (startDateInput) {
-                startDateInput.addEventListener('change', calculateVacationInfo);
-            }
-            if (endDateInput) {
-                endDateInput.addEventListener('change', calculateVacationInfo);
-            }
-
-            // Event listenery dla dat L4
-            const l4StartDateInput = document.getElementById('l4StartDate');
-            const l4EndDateInput = document.getElementById('l4EndDate');
-
-            if (l4StartDateInput) {
-                l4StartDateInput.addEventListener('change', calculateL4WorkingDays);
-            }
-            if (l4EndDateInput) {
-                l4EndDateInput.addEventListener('change', calculateL4WorkingDays);
-            }
-
+              const startDateInput = document.getElementById('vacationStartDate');
+              const endDateInput = document.getElementById('vacationEndDate');
+            
+              if (startDateInput) startDateInput.addEventListener('change', calculateVacationInfo);
+              if (endDateInput) endDateInput.addEventListener('change', calculateVacationInfo);
+            
+              const l4StartDateInput = document.getElementById('l4StartDate');
+              const l4EndDateInput = document.getElementById('l4EndDate');
+            
+              if (l4StartDateInput) l4StartDateInput.addEventListener('change', calculateL4WorkingDays);
+              if (l4EndDateInput) l4EndDateInput.addEventListener('change', calculateL4WorkingDays);
+            
+              // ✅ Apps Script rzeczy tylko jeśli istnieje google.script.run
+            const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+            
+            // 🔹 To uruchamiamy ZAWSZE (również na Cloudflare Pages)
+            loadDepartmentsFromSpreadsheet();
             setupDepartmentTileBadges();
-
-            // od razu + drugi raz po chwili, bo kafelki mogą się dorysować chwilę później
+            
             refreshLiveWorkforce();
             setTimeout(refreshLiveWorkforce, 800);
-            console.log('Rejestrator uruchomiony w Apps Script!');
-        });
-
-        window.addEventListener('beforeunload', function() {
-            stopAutoRefresh();
-        });
-
+            
+            if (hasAppsScript) {
+              updateManagerNotificationBadge();
+              startAutoRefresh();
+              console.log('Rejestrator uruchomiony w Apps Script!');
+            } else {
+              console.log('Tryb Cloudflare Pages: Apps Script wyłączony, ale działy załadowane');
+            }
+                
+           }); 
+                
         // ===== MODUŁ L4 - ZWOLNIENIA LEKARSKIE =====
 
 /**
