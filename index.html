@@ -5731,8 +5731,18 @@ window.selectDepartment = function(deptId) {
             ensureCodeInputFocus();
         }, 300);
         
-        // 3. W TLE - zapisz do arkusza
-        sendToSpreadsheetAsync(userToSave, deptId, 'zmieniam-operacje');
+        // 3. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
+        const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+        
+        if (!hasAppsScript) {
+          apiScanIntent('CHANGE_DEPT', { department: deptId })
+            .catch(err => {
+              console.error('❌ CHANGE_DEPT API error:', err);
+              showNotification('❌ Błąd zapisu zmiany operacji: ' + (err?.message || err), 'error');
+            });
+        } else {
+          sendToSpreadsheetAsync(userToSave, deptId, 'zmieniam-operacje');
+        }
         
         return;
     }
@@ -5745,7 +5755,17 @@ window.selectDepartment = function(deptId) {
         
         const deptName = departmentNames[deptId] || deptId;
         
-        sendToSpreadsheet(currentUser.login, deptId, 'zmieniam-operacje');
+        const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+
+        if (!hasAppsScript) {
+          apiScanIntent('CHANGE_DEPT', { department: deptId })
+            .catch(err => {
+              console.error('❌ CHANGE_DEPT API error:', err);
+              showNotification('❌ Błąd zapisu zmiany operacji: ' + (err?.message || err), 'error');
+            });
+        } else {
+          sendToSpreadsheet(currentUser.login, deptId, 'zmieniam-operacje');
+        }
         showNotification(`Zmieniono operację: ${deptName}`, 'success');
         
         setTimeout(() => {
