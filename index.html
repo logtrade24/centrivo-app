@@ -6072,8 +6072,7 @@ window.selectDepartment = function(deptId) {
     // ===== BEZPOŚREDNI SKAN PO WYBRANIU KAFELKA OPERACJI =====
     if (selectedUserForVerification.waitingForScan === true) {
         console.log('🔵 Tryb bezpośredniego skanu - szukam użytkownika po kodzie EAN');
-
-            const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+                const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
 
         // ✅ TRYB API: szukamy pracownika po kodzie przez API (a nie w lokalnym departments)
         if (!hasAppsScript) {
@@ -6172,21 +6171,8 @@ window.selectDepartment = function(deptId) {
             actionToSend = 'zmieniam-operacje';
         }
         
-                // ✅ Zapis (Pages: API /scan + intent, GS: stary zapis)
-        const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
-
-        if (!hasAppsScript) {
-            // apiScanIntent bierze kod z sessionStorage, więc ustawiamy go z tego ekranu weryfikacji
-            sessionStorage.setItem('currentEmployeeCode', cleanInputCode);
-
-            const intent = (actionToSend === 'zmieniam-operacje') ? 'CHANGE_DEPT' : 'ENTRY';
-
-            apiScanIntent(intent, { department: targetDepartment })
-                .catch(err => {
-                    console.error('❌ Direct scan API error:', err);
-                    showNotification('❌ Błąd zapisu: ' + (err?.message || err), 'error');
-                });
-        } else {
+        // Wyślij do arkusza
+        if (typeof google !== 'undefined' && google.script) {
             sendToSpreadsheet(currentUser.login, targetDepartment, actionToSend);
         }
         
