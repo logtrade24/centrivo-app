@@ -6072,6 +6072,72 @@ window.selectDepartment = function(deptId) {
     // ===== BEZPOŚREDNI SKAN PO WYBRANIU KAFELKA OPERACJI =====
     if (selectedUserForVerification.waitingForScan === true) {
         console.log('🔵 Tryb bezpośredniego skanu - szukam użytkownika po kodzie EAN');
+
+            const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+
+        // ✅ TRYB API: szukamy pracownika po kodzie przez API (a nie w lokalnym departments)
+        if (!hasAppsScript) {
+            sessionStorage.setItem('currentEmployeeCode', cleanInputCode);
+
+            apiLookupEmployeeByCode(cleanInputCode)
+              .then(data => {
+                if (!data || !data.success || !data.login) throw new Error('Nieprawidłowy kod EAN');
+
+                const foundUser = { login: data.login, name: data.name, status: data.status };
+                console.log('✅ Znaleziono użytkownika (API):', foundUser.login);
+
+                currentUser = foundUser;
+
+                const targetDepartment = currentDepartment;
+                const userCurrentStatus = foundUser.status || 'Nieaktywny';
+                const actionToSend = (userCurrentStatus === 'Pracuje' || userCurrentStatus === 'Na przerwie')
+                  ? 'zmieniam-operacje'
+                  : 'wchodzi';
+
+                const intent = (actionToSend === 'zmieniam-operacje') ? 'CHANGE_DEPT' : 'ENTRY';
+
+                apiScanIntent(intent, { department: targetDepartment })
+                  .catch(err => {
+                    console.error('❌ Direct scan API error:', err);
+                    showNotification('❌ Błąd zapisu: ' + (err?.message || err), 'error');
+                  });
+
+                const departmentNames = {
+                    'przyjecie': 'Przyjęcie dostaw',
+                    'rozladunek': 'Rozładunek ręczny kontenera',
+                    'zaladunek': 'Załadunek ręczny kontenera',
+                    'relokacja': 'Relokacja',
+                    'kompletacja': 'Kompletacja zamówień',
+                    'weryfikacja': 'Weryfikacja zamówień',
+                    'co-packing': 'Co-packing',
+                    'operacje-porzadkowe': 'Operacje porządkowe',
+                    'inwentaryzacja': 'Inwentaryzacja'
+                };
+
+                const deptName = departmentNames[targetDepartment] || targetDepartment;
+
+                if (actionToSend === 'zmieniam-operacje') {
+                    showNotification(foundUser.login + ' zmieniono operację na: ' + deptName, 'success');
+                } else {
+                    showNotification(foundUser.login + ' zalogowany do: ' + deptName, 'success');
+                }
+
+                setTimeout(function() {
+                    currentUser = null;
+                    selectedUserForVerification = null;
+                    showView('department');
+                    ensureCodeInputFocus();
+                    showNotification('Gotowy do kolejnej operacji', 'info');
+                }, 2000);
+              })
+              .catch(err => {
+                showNotification('Nieprawidłowy kod EAN', 'error');
+                document.getElementById('verificationCodeInput').value = '';
+                document.getElementById('verificationCodeInput').focus();
+              });
+
+            return;
+        }
         
         // Znajdź użytkownika po kodzie EAN
         let foundUser = null;
