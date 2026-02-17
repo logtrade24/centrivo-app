@@ -3677,6 +3677,19 @@ async function apiMarkAnnouncementAsRead(id, login){
   return data;
 }
 
+    async function apiListAnnouncementsForManager(login){
+  const r = await fetch(`${API_BASE}/announcements/list`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+
+  return data.announcements || [];
+}
+
     async function apiAddTimeEntry(payload){
   const r = await fetch(`${API_BASE}/time-entry`, {
     method: 'POST',
@@ -11652,47 +11665,48 @@ function submitAnnouncement() {
         .addAnnouncement(typ, tresc, dataWaznosci, odbiorcy, autor);
 }
 
-function loadAnnouncementsList() {
+async function loadAnnouncementsList() {
     const container = document.getElementById('announcementsList');
     container.innerHTML = '<p style="text-align: center; padding: 40px; color: #888;">⏳ Ładowanie...</p>';
-    
-    google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.success) {
-                if (result.announcements.length === 0) {
-                    container.innerHTML = '<div class="announcements-empty">📭 Brak ogłoszeń</div>';
-                    return;
-                }
-                
-                let html = '';
-                result.announcements.forEach(function(ann) {
-                    html += '<div class="announcement-item ' + ann.typ + '">';
-                    html += '<div class="announcement-item-header">';
-                    html += '<span class="announcement-item-type ' + ann.typ + '">';
-                    if (ann.typ === 'pilne') html += '🚨 Pilne';
-                    else if (ann.typ === 'wazne') html += '⚠️ Ważne';
-                    else html += 'ℹ️ Info';
-                    html += '</span>';
-                    html += '<button class="announcement-item-delete" onclick="deleteAnnouncementItem(' + ann.id + ')" title="Usuń">🗑️</button>';
-                    html += '</div>';
-                    html += '<div class="announcement-item-text">' + ann.tresc + '</div>';
-                    html += '<div class="announcement-item-meta">';
-                    html += '<span>Dodano: ' + ann.dataDodania + ' | Ważne do: ' + ann.dataWaznosci + '</span>';
-                    html += '<span class="announcement-item-readers">👁️ Przeczytało: ' + ann.readCount + ' osób</span>';
-                    html += '</div>';
-                    html += '<div style="font-size: 0.8rem; color: #888; margin-top: 5px;">Odbiorcy: ' + ann.odbiorcy + '</div>';
-                    html += '</div>';
-                });
-                
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = '<p style="color: red; text-align: center; padding: 40px;">❌ ' + result.message + '</p>';
-            }
-        })
-        .withFailureHandler(function(error) {
-            container.innerHTML = '<p style="color: red; text-align: center; padding: 40px;">❌ Błąd: ' + error.message + '</p>';
-        })
-        .getAllAnnouncements();
+
+    try {
+        const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+        if (!login) {
+            container.innerHTML = '<p style="color: red; text-align: center; padding: 40px;">❌ Brak loginu kierownika (zaloguj się ponownie)</p>';
+            return;
+        }
+
+        const announcements = await apiListAnnouncementsForManager(login);
+
+        if (!announcements.length) {
+            container.innerHTML = '<div class="announcements-empty">📭 Brak ogłoszeń</div>';
+            return;
+        }
+
+        let html = '';
+        announcements.forEach(function(ann) {
+            html += '<div class="announcement-item ' + ann.typ + '">';
+            html += '<div class="announcement-item-header">';
+            html += '<span class="announcement-item-type ' + ann.typ + '">';
+            if (ann.typ === 'pilne') html += '🚨 Pilne';
+            else if (ann.typ === 'wazne') html += '⚠️ Ważne';
+            else html += 'ℹ️ Info';
+            html += '</span>';
+            html += '</div>';
+            html += '<div class="announcement-item-text">' + ann.tresc + '</div>';
+            html += '<div class="announcement-item-meta">';
+            html += '<span>Dodano: ' + (ann.dataDodania || '-') + ' | Ważne do: ' + (ann.dataWaznosci || '-') + '</span>';
+            html += '<span class="announcement-item-readers">👁️ Przeczytało: ' + (ann.readCount ?? 0) + ' osób</span>';
+            html += '</div>';
+            html += '<div style="font-size: 0.8rem; color: #888; margin-top: 5px;">Odbiorcy: ' + (ann.odbiorcy || 'WSZYSCY') + '</div>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        container.innerHTML = '<p style="color: red; text-align: center; padding: 40px;">❌ ' + (e.message || 'Błąd') + '</p>';
+    }
 }
 
 function deleteAnnouncementItem(id) {
