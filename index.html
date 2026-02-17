@@ -3702,6 +3702,28 @@ async function apiMarkAnnouncementAsRead(id, login){
   return data;
 }
 
+    async function apiGetEmployeesForRecipients(login){
+  const r = await fetch(`${API_BASE}/announcements/employees`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data.employees || [];
+}
+
+async function apiCreateAnnouncement(login, typ, tresc, dataWaznosci, odbiorcy, autor){
+  const r = await fetch(`${API_BASE}/announcements/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, typ, tresc, dataWaznosci, odbiorcy, autor })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
   // ===== OPTYMALIZACJA - NATYCHMIASTOWA REAKCJA UI =====
 
 /**
@@ -11576,29 +11598,31 @@ function setDefaultValidDate() {
     document.getElementById('annValidUntil').value = yyyy + '-' + mm + '-' + dd;
 }
 
-function loadEmployeesForRecipients() {
+async function loadEmployeesForRecipients() {
     const container = document.getElementById('recipientsList');
     container.innerHTML = '<p style="padding: 10px; color: #888;">⏳ Ładowanie...</p>';
-    
-    google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.success) {
-                let html = '';
-                result.employees.forEach(function(emp) {
-                    html += '<label>';
-                    html += '<input type="checkbox" class="recipient-checkbox" value="' + emp.login + '"> ';
-                    html += emp.name + ' (' + emp.login + ')';
-                    html += '</label>';
-                });
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = '<p style="color: red;">❌ ' + result.message + '</p>';
-            }
-        })
-        .withFailureHandler(function(error) {
-            container.innerHTML = '<p style="color: red;">❌ Błąd: ' + error.message + '</p>';
-        })
-        .getEmployeesList();
+
+    try {
+        const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+        if (!login) {
+            container.innerHTML = '<p style="color: red;">❌ Brak loginu (zaloguj się ponownie)</p>';
+            return;
+        }
+
+        const employees = await apiGetEmployeesForRecipients(login);
+
+        let html = '';
+        employees.forEach(function(emp) {
+            html += '<label>';
+            html += '<input type="checkbox" class="recipient-checkbox" value="' + emp.login + '"> ';
+            html += emp.name + ' (' + emp.login + ')';
+            html += '</label>';
+        });
+
+        container.innerHTML = html || '<p style="padding:10px;color:#888;">Brak pracowników</p>';
+    } catch (e) {
+        container.innerHTML = '<p style="color: red;">❌ ' + (e.message || 'Błąd') + '</p>';
+    }
 }
 
 function toggleAllRecipients() {
@@ -11613,56 +11637,43 @@ function toggleAllRecipients() {
     document.getElementById('recipientsList').style.opacity = allChecked ? '0.5' : '1';
 }
 
-function submitAnnouncement() {
+async function submitAnnouncement() {
     const typ = document.getElementById('annType').value;
     const tresc = document.getElementById('annMessage').value.trim();
     const dataWaznosci = document.getElementById('annValidUntil').value;
     const allRecipients = document.getElementById('annAllRecipients').checked;
-    
-    if (!tresc) {
-        showNotification('Wpisz treść ogłoszenia', 'error');
-        return;
-    }
-    
-    if (!dataWaznosci) {
-        showNotification('Wybierz datę ważności', 'error');
-        return;
-    }
-    
+
+    if (!tresc) { showNotification('Wpisz treść ogłoszenia', 'error'); return; }
+    if (!dataWaznosci) { showNotification('Wybierz datę ważności', 'error'); return; }
+
     let odbiorcy = 'WSZYSCY';
     if (!allRecipients) {
         const selected = [];
         document.querySelectorAll('.recipient-checkbox:checked').forEach(function(cb) {
             selected.push(cb.value);
         });
-        
         if (selected.length === 0) {
             showNotification('Wybierz odbiorców lub zaznacz "Wszyscy"', 'error');
             return;
         }
-        
         odbiorcy = selected.join(',');
     }
-    
-    const autor = sessionStorage.getItem('loggedInUser') || 'kierownik';
-    
-    google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.success) {
-                showNotification('Ogłoszenie zostało wysłane!', 'success');
-                closeAnnouncementsPanel();
-                // Wyczyść formularz na następny raz
-                document.getElementById('annMessage').value = '';
-                document.getElementById('annAllRecipients').checked = false;
-                document.getElementById('annType').value = 'info';
-            } else {
-                showNotification('Błąd: ' + result.message, 'error');
-            }
-        })
-        .withFailureHandler(function(error) {
-            showNotification('Błąd: ' + error.message, 'error');
-        })
-        .addAnnouncement(typ, tresc, dataWaznosci, odbiorcy, autor);
+
+    const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+    const autor = login || 'kierownik';
+
+    try {
+        await apiCreateAnnouncement(login, typ, tresc, dataWaznosci, odbiorcy, autor);
+
+        showNotification('Ogłoszenie zostało wysłane!', 'success');
+        closeAnnouncementsPanel();
+
+        document.getElementById('annMessage').value = '';
+        document.getElementById('annAllRecipients').checked = false;
+        document.getElementById('annType').value = 'info';
+    } catch (e) {
+        showNotification('Błąd: ' + (e.message || 'Błąd'), 'error');
+    }
 }
 
 async function loadAnnouncementsList() {
