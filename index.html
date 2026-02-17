@@ -6106,8 +6106,21 @@ window.selectDepartment = function(deptId) {
             actionToSend = 'zmieniam-operacje';
         }
         
-        // Wyślij do arkusza
-        if (typeof google !== 'undefined' && google.script) {
+                // ✅ Zapis (Pages: API /scan + intent, GS: stary zapis)
+        const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+
+        if (!hasAppsScript) {
+            // apiScanIntent bierze kod z sessionStorage, więc ustawiamy go z tego ekranu weryfikacji
+            sessionStorage.setItem('currentEmployeeCode', cleanInputCode);
+
+            const intent = (actionToSend === 'zmieniam-operacje') ? 'CHANGE_DEPT' : 'ENTRY';
+
+            apiScanIntent(intent, { department: targetDepartment })
+                .catch(err => {
+                    console.error('❌ Direct scan API error:', err);
+                    showNotification('❌ Błąd zapisu: ' + (err?.message || err), 'error');
+                });
+        } else {
             sendToSpreadsheet(currentUser.login, targetDepartment, actionToSend);
         }
         
