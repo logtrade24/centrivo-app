@@ -6106,9 +6106,8 @@ window.selectDepartment = function(deptId) {
 
                 apiScanIntent(intent, { department: targetDepartment })
                   .then(() => {
-                    // odśwież badge/liczniki po operacji
-                    setTimeout(refreshLiveWorkforce, 200);
-                    setTimeout(refreshLiveWorkforce, 1500);
+                    refreshLiveWorkforce();                // od razu
+                    setTimeout(refreshLiveWorkforce, 600); // dogrywka
                   })
                   .catch(err => {
                     console.error('❌ Direct scan API error:', err);
