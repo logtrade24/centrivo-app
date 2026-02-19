@@ -12005,6 +12005,13 @@ function setupDepartmentTileBadges() {
   tiles.forEach(tile => {
     if (tile.querySelector('.dept-badge')) return;
 
+    // uzupełnij deptId dla hardcoded kafelków (z onclick selectDepartment('...'))
+    if (!tile.dataset.deptId) {
+      const onclick = tile.getAttribute('onclick') || '';
+      const m = onclick.match(/selectDepartment\(\s*['"](.+?)['"]\s*\)/);
+      if (m && m[1]) tile.dataset.deptId = m[1];
+    }
+
     const deptId = tile.dataset.deptId;
     if (!deptId) return;
 
@@ -12176,6 +12183,50 @@ function applyLiveWorkforceToUI(data) {
 
 
 function refreshLiveWorkforce() {
+  // 1) Preferuj API (bo GS wyłączony)
+  if (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
+    const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+
+    fetch(`${API_BASE_URL}/workforce/live-snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data || data.success !== true) return;
+
+      const rows = Array.isArray(data.rows) ? data.rows : [];
+
+      const working = [];
+      const onBreak = [];
+
+      rows.forEach(r => {
+        const status = String(r.status || '').toUpperCase();
+        const emp = {
+          login: r.login,
+          name: r.name || r.login,
+          operation: r.dept || r.department || '-'   // ważne: operation zasila badge
+        };
+
+        if (status === 'PRACUJE') working.push(emp);
+        else if (status === 'PRZERWA') onBreak.push(emp);
+      });
+
+      liveWorkforceCache = {
+        loaded: true,
+        working,
+        onBreak
+      };
+
+      applyLiveWorkforceToUI(liveWorkforceCache);
+    })
+    .catch(err => console.log('refreshLiveWorkforce API error:', err));
+
+    return;
+  }
+
+  // 2) Fallback na GS (gdybyś kiedyś odpalał starą wersję)
   if (typeof google === 'undefined' || !google.script) return;
 
   google.script.run
@@ -12196,14 +12247,12 @@ function refreshLiveWorkforce() {
       };
 
       applyLiveWorkforceToUI(liveWorkforceCache);
-      console.log('LIVE counts:', liveWorkforceCache.working.length, liveWorkforceCache.onBreak.length);
-
     })
     .withFailureHandler(function(err) {
-      console.log('refreshLiveWorkforce error:', err);
+      console.log('refreshLiveWorkforce GS error:', err);
     })
     .getActiveEmployees();
-}
+
 
         // ===== INICJALIZACJA =====
             document.addEventListener('DOMContentLoaded', function() {
@@ -12700,9 +12749,8 @@ function getCategoryName(category) {
 
 // Synchronizacja z innymi stanowiskami (raz na 60s)
 setInterval(function () {
-    if (typeof google === 'undefined' || !google.script) return;
     refreshLiveWorkforce();
-}, 60000);
+}, 300000); // 5 minut
 
 
     </script>
