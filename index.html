@@ -6105,6 +6105,11 @@ window.selectDepartment = function(deptId) {
                 const intent = (actionToSend === 'zmieniam-operacje') ? 'CHANGE_DEPT' : 'ENTRY';
 
                 apiScanIntent(intent, { department: targetDepartment })
+                  .then(() => {
+                    // odśwież badge/liczniki po operacji
+                    setTimeout(refreshLiveWorkforce, 200);
+                    setTimeout(refreshLiveWorkforce, 1500);
+                  })
                   .catch(err => {
                     console.error('❌ Direct scan API error:', err);
                     showNotification('❌ Błąd zapisu: ' + (err?.message || err), 'error');
@@ -12187,7 +12192,7 @@ function refreshLiveWorkforce() {
   if (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
     const login = (sessionStorage.getItem('loggedInUser') || '').trim();
 
-    fetch(`${API_BASE_URL}/workforce/live-snapshot`, {
+    fetch(`${API_BASE}/workforce/live-snapshot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ login })
