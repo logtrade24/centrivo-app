@@ -5053,6 +5053,9 @@ function checkSession() {
 
     if (typeof showView === 'function') showView('department');
     setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
+      
+    refreshLiveWorkforce();
+    setTimeout(refreshLiveWorkforce, 800);
 
   } else {
     isLoggedIn = false;
