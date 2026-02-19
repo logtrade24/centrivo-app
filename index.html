@@ -3811,33 +3811,36 @@ function refreshWorkforceLiveUI(){
   const list = document.getElementById('workforceLiveList');
   if (list) list.innerHTML = '<div style="padding:18px; text-align:center; opacity:.8;">⏳ Ładowanie.</div>';
 
-  if (typeof google === 'undefined' || !google.script) {
-    if (list) list.innerHTML = '<div style="padding:18px; text-align:center;">Tryb testowy – brak połączenia z arkuszem</div>';
-    return;
-  }
+    if (typeof google === 'undefined' || !google.script) {
+    // PAGES/API
+    const managerLogin = (sessionStorage.getItem('loggedInUser') || '').trim();
 
-  google.script.run
-    .withSuccessHandler(function(result){
+    fetch(API_BASE + '/workforce/live-snapshot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: managerLogin })
+    })
+    .then(r => r.json())
+    .then(result => {
       if (!result || !result.success) {
-        if (list) list.innerHTML = '<div style="padding:18px; text-align:center; color:#ef4444;">❌ Błąd danych</div>';
+        if (list) list.innerHTML = '<div style="padding:18px; text-align:center; color:#ef4444;">❌ ' + (result && result.message ? result.message : 'Błąd danych') + '</div>';
         return;
       }
 
-      // cache do renderowania
       liveAllRowsCache = Array.isArray(result.rows) ? result.rows : [];
-
       liveRender();
       liveUpdateTileActive();
 
-      // jeśli ktoś był zaznaczony i nadal istnieje – możesz to zostawić po odświeżeniu
       if (liveSelectedLogin && liveAllRowsCache.some(x => x.login === liveSelectedLogin)) {
         liveShowDetails(liveSelectedLogin);
       }
     })
-    .withFailureHandler(function(error){
-      if (list) list.innerHTML = '<div style="padding:18px; text-align:center; color:#ef4444;">❌ Błąd: ' + (error && error.message ? error.message : error) + '</div>';
-    })
-    .getWorkforceLiveSnapshot();
+    .catch(err => {
+      if (list) list.innerHTML = '<div style="padding:18px; text-align:center; color:#ef4444;">❌ Błąd: ' + (err && err.message ? err.message : err) + '</div>';
+    });
+
+    return;
+  }
 }
 
 function liveRender(){
