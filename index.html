@@ -4971,20 +4971,19 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
 
   // ===== TRYB CLOUDFLARE PAGES (API) =====
   if (!hasAppsScript) {
+    apiAddTimeEntry(data)
+      .then((result) => {
+        console.log('✅ Zapisano przez API:', result);
 
-  // ✅ NATYCHMIAST w UI (bez czekania na API)
-  optimisticUpdateLiveWorkforce(data);
+        // ✅ dopiero po sukcesie zmieniamy UI (żeby COFNIJ działało logicznie)
+        optimisticUpdateLiveWorkforce(data);
 
-  apiAddTimeEntry(data)
-    .then((result) => {
-      console.log('✅ Zapisano przez API:', result);
+        if (callback) callback(result);
 
-      if (callback) callback(result);
-
-      // dosynchronizuj po zapisie
-      setTimeout(refreshLiveWorkforce, 200);
-      setTimeout(refreshLiveWorkforce, 1500);
-    })
+        // dosynchronizuj “live”
+        setTimeout(refreshLiveWorkforce, 200);
+        setTimeout(refreshLiveWorkforce, 1500);
+      })
       .catch((error) => {
         console.error('❌ Błąd API zapisu:', error);
         if (callback) callback({ success: false, message: (error && error.message) ? error.message : 'Błąd zapisu API' });
@@ -5053,9 +5052,6 @@ function checkSession() {
 
     if (typeof showView === 'function') showView('department');
     setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
-      
-    refreshLiveWorkforce();
-    setTimeout(refreshLiveWorkforce, 800);
 
   } else {
     isLoggedIn = false;
@@ -9815,11 +9811,9 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                   showView('action');
                   updateButtonStates();
                   updateMyTicketsTileInActionView();
-                
-                  refreshLiveWorkforce();
-                
+            
                   showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
-                  }
+                }
             
                 // ✅ Ogłoszenia przed panelem
                 // Jeśli API zwróci announcements[] -> użyjemy tego bez dodatkowego calla
