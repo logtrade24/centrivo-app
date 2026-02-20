@@ -12263,8 +12263,8 @@ function refreshLiveWorkforce() {
    (currentUser && currentUser.login) ||
    '').trim();
 
-// jeśli zwykły operator nie ma prawa do snapshotu, pobieraj snapshot jako "serwisowy"
-const snapshotLogin = login || 'jerzyd';
+    // snapshot liczników/badge pobieramy zawsze "serwisowo"
+    const snapshotLogin = 'jerzyd';
 
     fetch(`${API_BASE}/workforce/live-snapshot`, {
       method: 'POST',
