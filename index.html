@@ -5105,6 +5105,10 @@ function checkSession() {
 
   const err = document.getElementById('loginError');
   if (err) { err.textContent = ''; err.style.display = 'none'; }
+
+          // ✅ po loginie od razu zaciągnij liczniki/badge (bez F5)
+  refreshLiveWorkforce();
+  setTimeout(refreshLiveWorkforce, 800);
 }
 
 function handleLogin() {
@@ -9815,8 +9819,10 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                   showView('action');
                   updateButtonStates();
                   updateMyTicketsTileInActionView();
+                    
                   refreshLiveWorkforce();
-            
+                  setTimeout(refreshLiveWorkforce, 800);
+                    
                   showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
                 }
             
