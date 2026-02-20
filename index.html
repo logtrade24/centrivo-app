@@ -5049,7 +5049,8 @@ function checkSession() {
     if (mainInterface) mainInterface.style.display = 'block';
 
     // kafelki kierownika
-    setManagerButtons(String(loggedInUser || '').trim() === 'jerzyd');
+    const MANAGER_LOGINS = ['jerzyd', 'dbklogistics'];
+    setManagerButtons(MANAGER_LOGINS.includes(String(loggedInUser || '').trim()));
 
     if (typeof showView === 'function') showView('department');
     setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
