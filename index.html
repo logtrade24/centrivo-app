@@ -5871,10 +5871,18 @@ if (window.isChangingOperation && currentUser) {
         showNotification(`Zmieniono operację: ${deptName}`, 'success');
         
         setTimeout(() => {
+            // wyjście z trybu zmiany operacji (żeby nie wisiał napis)
+            window.isChangingOperation = false;
+        
             isLoggedIn = false;
             workerState = 'not-logged-in';
             currentUser = null;
             currentDepartment = null;
+        
+            // ✅ przywróć normalny tytuł widoku głównego
+            const deptTitleEl = document.getElementById('departmentView')?.querySelector('.view-title');
+            if (deptTitleEl) deptTitleEl.textContent = 'Wybierz dział/operację';
+        
             document.getElementById('welcomeHeader').classList.remove('show');
             showView('department');
             ensureCodeInputFocus();
