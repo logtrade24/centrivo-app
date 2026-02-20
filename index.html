@@ -5834,11 +5834,15 @@ window.selectDepartment = function(deptId) {
         const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
         
         if (!hasAppsScript) {
-          apiScanIntent('CHANGE_DEPT', { department: deptId })
-            .catch(err => {
-              console.error('❌ CHANGE_DEPT API error:', err);
-              showNotification('❌ Błąd zapisu zmiany operacji: ' + (err?.message || err), 'error');
-            });
+          apiScanIntent('CHANGE_DEPT', { department: deptToSave })
+          .then(() => {
+            refreshLiveWorkforce();
+            setTimeout(refreshLiveWorkforce, 800);
+          })
+          .catch(err => {
+            console.error('❌ CHANGE_DEPT API error:', err);
+            showNotification('❌ Błąd zapisu CHANGE_DEPT: ' + (err?.message || err), 'error');
+          });
         } else {
           sendToSpreadsheetAsync(userToSave, deptId, 'zmieniam-operacje');
         }
@@ -6433,10 +6437,14 @@ window.selectDepartment = function(deptId) {
         // 2. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
         if (!hasAppsScript) {
           apiScanIntent('ENTRY', { department: deptToSave })
-            .catch(err => {
-              console.error('❌ ENTRY API error:', err);
-              showNotification('❌ Błąd zapisu ENTRY: ' + (err?.message || err), 'error');
-            });
+          .then(() => {
+            refreshLiveWorkforce();
+            setTimeout(refreshLiveWorkforce, 800);
+          })
+          .catch(err => {
+            console.error('❌ ENTRY API error:', err);
+            showNotification('❌ Błąd zapisu ENTRY: ' + (err?.message || err), 'error');
+          });
         } else {
           sendToSpreadsheetAsync(userToSave, deptToSave, action);
         }
@@ -6469,10 +6477,14 @@ window.selectDepartment = function(deptId) {
         // 2. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
         if (!hasAppsScript) {
           apiScanIntent('EXIT', { department: deptToSave })
-            .catch(err => {
-              console.error('❌ EXIT API error:', err);
-              showNotification('❌ Błąd zapisu EXIT: ' + (err?.message || err), 'error');
-            });
+          .then(() => {
+            refreshLiveWorkforce();
+            setTimeout(refreshLiveWorkforce, 800);
+          })
+          .catch(err => {
+            console.error('❌ EXIT API error:', err);
+            showNotification('❌ Błąd zapisu EXIT: ' + (err?.message || err), 'error');
+          });
         } else {
           sendToSpreadsheetAsync(userToSave, deptToSave, 'wychodzi-pracy');
         }
