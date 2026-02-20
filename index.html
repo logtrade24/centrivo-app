@@ -12091,7 +12091,22 @@ function removeByLogin(arr, login) {
 
 function optimisticUpdateLiveWorkforce(data) {
   if (!data || !data.login || !data.action) return;
-  if (!currentUser || normLogin(currentUser.login) !== normLogin(data.login)) return;
+
+  const dataLogin = normLogin(data.login);
+  const activeLogin = normLogin(
+    (currentUser && currentUser.login) ||
+    sessionStorage.getItem('currentEmployeeLogin') ||
+    ''
+  );
+
+  // optimistic tylko dla aktualnie “obsługiwanego” pracownika
+  if (!activeLogin || activeLogin !== dataLogin) return;
+
+  // jeśli skan ustawił tylko currentEmployeeLogin (bez currentUser),
+  // to zbuduj minimalny currentUser, żeby optimistic mógł działać
+  if (!currentUser) {
+    currentUser = { login: data.login, name: data.login };
+  }
 
   const actionRaw = String(data.action || '');
   const a = actionRaw
