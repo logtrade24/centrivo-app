@@ -12110,33 +12110,33 @@ function optimisticUpdateLiveWorkforce(data) {
   }
 
   const actionRaw = String(data.action || '');
-const a = actionRaw.toLowerCase();
-const A = actionRaw.toUpperCase();
+  const a = actionRaw.toLowerCase();
+  const A = actionRaw.toUpperCase();
 
-// przerwa: łap zarówno polskie teksty jak i kody
-const isBreakStart =
-  a.includes('przerw') && (a.includes('wychod') || a.includes('start')) ||
-  A === 'BREAK_START' || A === 'BREAK_IN' || A === 'BREAKBEGIN';
+  // ===== PRZERWY (obsługa kodów + tekstów) =====
+  const isBreakStart =
+    A === 'BREAK_START' || A === 'BREAK_IN' || A === 'BREAKBEGIN' ||
+    (a.includes('przerw') && (a.includes('wychod') || a.includes('start') || a.includes('na przerw')));
 
-const isBreakEnd =
-  a.includes('przerw') && (a.includes('wracam') || a.includes('koniec') || a.includes('end')) ||
-  A === 'BREAK_END' || A === 'BREAK_OUT' || A === 'BREAKFINISH';
+  const isBreakEnd =
+    A === 'BREAK_END' || A === 'BREAK_OUT' || A === 'BREAKFINISH' ||
+    (a.includes('przerw') && (a.includes('wracam') || a.includes('koniec') || a.includes('end') || a.includes('z przerw')));
 
-// dla kompatybilności, jeśli gdzieś leci samo BREAK:
-const isBreak =
-  isBreakStart || isBreakEnd || A === 'BREAK' || a === 'break';
+  // kompatybilność, jeśli gdzieś leci samo BREAK
+  const isBreak = isBreakStart || isBreakEnd || A === 'BREAK' || a === 'break';
 
+  // ===== PRACA / WYJŚCIE / ZMIANA OPERACJI =====
   const isEnterWork =
-      a === 'entry' ||
-      a.includes('wchodz') || a.includes('start') || a.includes('loguje') || a.includes('zaczynam');
+    a === 'entry' ||
+    a.includes('wchodz') || a.includes('start') || a.includes('loguje') || a.includes('zaczynam');
 
   const isExitWork =
-      a === 'exit' ||
-      a.includes('wychodz') || a.includes('wylog') || (a.includes('koniec') && !isBreak);
-    
+    a === 'exit' ||
+    a.includes('wychodz') || a.includes('wylog') || (a.includes('koniec') && !isBreak);
+
   const isChangeOp =
-      a === 'change_dept' ||
-      a.includes('zmien') || a.includes('operac') || a.includes('operation');
+    a === 'change_dept' ||
+    a.includes('zmien') || a.includes('operac') || a.includes('operation');
 
   const emp = {
     login: currentUser.login,
@@ -12147,9 +12147,12 @@ const isBreak =
   if (!liveWorkforceCache.working) liveWorkforceCache.working = [];
   if (!liveWorkforceCache.onBreak) liveWorkforceCache.onBreak = [];
 
-  // (możesz później wyłączyć)
-  console.log('[optimistic]', actionRaw, { isEnterWork, isExitWork, isBreakStart, isReturn, isChangeOp });
+  // debug (możesz później wyłączyć)
+  console.log('[optimistic]', actionRaw, {
+    isEnterWork, isExitWork, isBreakStart, isBreakEnd, isChangeOp
+  });
 
+  // ===== PRZERWA START =====
   if (isBreakStart) {
     // working -> onBreak
     removeByLogin(liveWorkforceCache.working, emp.login);
@@ -12158,7 +12161,8 @@ const isBreak =
     return;
   }
 
-  if (isReturn) {
+  // ===== PRZERWA KONIEC (POWRÓT) =====
+  if (isBreakEnd) {
     // onBreak -> working
     removeByLogin(liveWorkforceCache.onBreak, emp.login);
     upsertByLogin(liveWorkforceCache.working, emp);
@@ -12166,6 +12170,7 @@ const isBreak =
     return;
   }
 
+  // ===== WYJŚCIE Z PRACY =====
   if (isExitWork) {
     // usuń z obu
     removeByLogin(liveWorkforceCache.working, emp.login);
@@ -12174,6 +12179,7 @@ const isBreak =
     return;
   }
 
+  // ===== WEJŚCIE DO PRACY =====
   if (isEnterWork) {
     // dodaj do working
     removeByLogin(liveWorkforceCache.onBreak, emp.login);
@@ -12182,6 +12188,7 @@ const isBreak =
     return;
   }
 
+  // ===== ZMIANA OPERACJI =====
   if (isChangeOp) {
     const key = normLogin(emp.login);
 
