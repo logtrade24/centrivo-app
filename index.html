@@ -6440,14 +6440,14 @@ window.selectDepartment = function(deptId) {
         if (!hasAppsScript) {
           optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'ENTRY', department: deptToSave });
           apiScanIntent('ENTRY', { department: deptToSave })
-          .then(() => {
-            refreshLiveWorkforce();
-            setTimeout(refreshLiveWorkforce, 800);
-          })
-          .catch(err => {
-            console.error('❌ ENTRY API error:', err);
-            showNotification('❌ Błąd zapisu ENTRY: ' + (err?.message || err), 'error');
-          });
+              .then(() => {
+                refreshLiveWorkforce();
+                setTimeout(refreshLiveWorkforce, 600);
+              })
+              .catch(err => {
+                console.error('❌ ENTRY API error:', err);
+                showNotification('❌ Błąd zapisu ENTRY: ' + (err?.message || err), 'error');
+              });
         } else {
           sendToSpreadsheetAsync(userToSave, deptToSave, action);
         }
@@ -6481,14 +6481,14 @@ window.selectDepartment = function(deptId) {
         if (!hasAppsScript) {
           optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'EXIT', department: deptToSave });
           apiScanIntent('EXIT', { department: deptToSave })
-          .then(() => {
-            refreshLiveWorkforce();
-            setTimeout(refreshLiveWorkforce, 800);
-          })
-          .catch(err => {
-            console.error('❌ EXIT API error:', err);
-            showNotification('❌ Błąd zapisu EXIT: ' + (err?.message || err), 'error');
-          });
+              .then(() => {
+                refreshLiveWorkforce();
+                setTimeout(refreshLiveWorkforce, 600);
+              })
+              .catch(err => {
+                console.error('❌ EXIT API error:', err);
+                showNotification('❌ Błąd zapisu EXIT: ' + (err?.message || err), 'error');
+              });
         } else {
           sendToSpreadsheetAsync(userToSave, deptToSave, 'wychodzi-pracy');
         }
