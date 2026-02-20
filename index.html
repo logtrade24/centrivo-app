@@ -12200,7 +12200,11 @@ function applyLiveWorkforceToUI(data) {
 function refreshLiveWorkforce() {
   // 1) Preferuj API (bo GS wyłączony)
  if (typeof API_BASE !== 'undefined' && API_BASE) {
-    const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+    const login =
+  (sessionStorage.getItem('loggedInUser') ||
+   sessionStorage.getItem('currentEmployeeLogin') ||
+   (currentUser && currentUser.login) ||
+   '').trim();
 
     fetch(`${API_BASE}/workforce/live-snapshot`, {
       method: 'POST',
