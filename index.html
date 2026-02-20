@@ -5031,11 +5031,6 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
 
 let isLoggedIn = false;
 
-// Sprawdź sesję przy załadowaniu strony
-window.addEventListener('DOMContentLoaded', function() {
-  checkSession();
-});
-
 function checkSession() {
   const sessionLogin = sessionStorage.getItem('isLoggedIn');
   const loggedInUser = sessionStorage.getItem('loggedInUser');
@@ -12409,15 +12404,17 @@ function refreshLiveWorkforce() {
             loadDepartmentsFromSpreadsheet();
             setupDepartmentTileBadges();
             
-            refreshLiveWorkforce();
-            setTimeout(refreshLiveWorkforce, 800);
+            // ❗ NIE odpalamy tu refreshLiveWorkforce()
+            // Start sesji + pierwszy refresh zrobi checkSession()
+            
+            checkSession();
             
             if (hasAppsScript) {
               updateManagerNotificationBadge();
               startAutoRefresh();
               console.log('Rejestrator uruchomiony w Apps Script!');
             } else {
-              console.log('Tryb Cloudflare Pages: Apps Script wyłączony, ale działy załadowane');
+              console.log('Tryb Cloudflare Pages: Apps Script wyłączony');
             }
                 
            }); 
