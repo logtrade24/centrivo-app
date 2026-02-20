@@ -5802,51 +5802,52 @@ window.selectDepartment = function(deptId) {
         return;
     }
     
-    // ZMIANA OPERACJI - użytkownik już zalogowany
-    if (window.isChangingOperation && currentUser) {
-        const deptName = departmentNames[deptId] || deptId;
-        
-        // 1. NATYCHMIAST - pokaż sukces
-        showNotification(`✅ ${currentUser.login}: Zmieniono operację na ${deptName}`, 'success');
-        
-        const userToSave = currentUser.login;
-        
-        // 2. NATYCHMIAST - reset i powrót do głównego widoku
-        setTimeout(() => {
-            window.isChangingOperation = false;
-            isLoggedIn = false;
-            workerState = 'not-logged-in';
-            currentUser = null;
-            currentDepartment = null;
-            
-            document.getElementById('departmentView').querySelector('.view-title').textContent = 
-                'Wybierz dział/operację';
-            
-            document.getElementById('welcomeHeader').classList.remove('show');
-            showView('department');
-            ensureCodeInputFocus();
-        }, 300);
-        
-        // 3. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
-        const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
-        
-        if (!hasAppsScript) {
-          optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'CHANGE_DEPT', department: deptToSave });
-          apiScanIntent('CHANGE_DEPT', { department: deptToSave })
+    // ZMIANA OPERACJI - użytkownik już zalogowany (z panelu operatora)
+if (window.isChangingOperation && currentUser) {
+    const deptName = departmentNames[deptId] || deptId;
+    const userToSave = currentUser.login;
+
+    // ustaw nowy dział lokalnie
+    currentDepartment = deptId;
+    window.isChangingOperation = false;
+
+    // wróć do panelu operatora (bez wylogowania!)
+    const titleEl = document.getElementById('actionViewTitle');
+    if (titleEl) titleEl.textContent = `Panel operatora - ${currentUser.login} (${deptName})`;
+
+    showView('action');
+    updateButtonStates();
+
+    showNotification(`✅ ${currentUser.login}: Zmieniono operację na ${deptName}`, 'success');
+
+    // optimistic od razu aktualizuj badge/liczniki
+    try {
+        optimisticUpdateLiveWorkforce({
+            login: userToSave,
+            action: 'CHANGE_DEPT',
+            department: deptId
+        });
+    } catch (e) {}
+
+    // zapis w tle (Pages: API /scan + intent, GS: stary zapis)
+    const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+
+    if (!hasAppsScript) {
+        apiScanIntent('CHANGE_DEPT', { department: deptId })
           .then(() => {
             refreshLiveWorkforce();
-            setTimeout(refreshLiveWorkforce, 800);
+            setTimeout(refreshLiveWorkforce, 600);
           })
           .catch(err => {
             console.error('❌ CHANGE_DEPT API error:', err);
             showNotification('❌ Błąd zapisu CHANGE_DEPT: ' + (err?.message || err), 'error');
           });
-        } else {
-          sendToSpreadsheetAsync(userToSave, deptId, 'zmieniam-operacje');
-        }
-        
-        return;
+    } else {
+        sendToSpreadsheetAsync(userToSave, deptId, 'zmieniam-operacje');
     }
+
+    return;
+}
     
     currentDepartment = deptId;
     
