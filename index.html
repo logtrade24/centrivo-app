@@ -12114,15 +12114,20 @@ function optimisticUpdateLiveWorkforce(data) {
   const A = actionRaw.toUpperCase();
 
   // ===== PRZERWY (obsługa kodów + tekstów) =====
+  // START: BREAK_START / wychodzi-przerwa / "wychodzę na przerwę"
   const isBreakStart =
-    A === 'BREAK_START' || A === 'BREAK_IN' || A === 'BREAKBEGIN' ||
+    A === 'BREAK_START' ||
+    a === 'wychodzi-przerwa' ||
+    a.includes('wychodzi-przerwa') ||
     (a.includes('przerw') && (a.includes('wychod') || a.includes('start') || a.includes('na przerw')));
 
+  // END: BREAK_END / wracam / "wracam z przerwy"
   const isBreakEnd =
-    A === 'BREAK_END' || A === 'BREAK_OUT' || A === 'BREAKFINISH' ||
+    A === 'BREAK_END' ||
+    a === 'wracam' ||
+    a.startsWith('wracam') ||
     (a.includes('przerw') && (a.includes('wracam') || a.includes('koniec') || a.includes('end') || a.includes('z przerw')));
 
-  // kompatybilność, jeśli gdzieś leci samo BREAK
   const isBreak = isBreakStart || isBreakEnd || A === 'BREAK' || a === 'break';
 
   // ===== PRACA / WYJŚCIE / ZMIANA OPERACJI =====
@@ -12147,14 +12152,8 @@ function optimisticUpdateLiveWorkforce(data) {
   if (!liveWorkforceCache.working) liveWorkforceCache.working = [];
   if (!liveWorkforceCache.onBreak) liveWorkforceCache.onBreak = [];
 
-  // debug (możesz później wyłączyć)
-  console.log('[optimistic]', actionRaw, {
-    isEnterWork, isExitWork, isBreakStart, isBreakEnd, isChangeOp
-  });
-
   // ===== PRZERWA START =====
   if (isBreakStart) {
-    // working -> onBreak
     removeByLogin(liveWorkforceCache.working, emp.login);
     upsertByLogin(liveWorkforceCache.onBreak, emp);
     applyLiveWorkforceToUI(liveWorkforceCache);
@@ -12163,7 +12162,6 @@ function optimisticUpdateLiveWorkforce(data) {
 
   // ===== PRZERWA KONIEC (POWRÓT) =====
   if (isBreakEnd) {
-    // onBreak -> working
     removeByLogin(liveWorkforceCache.onBreak, emp.login);
     upsertByLogin(liveWorkforceCache.working, emp);
     applyLiveWorkforceToUI(liveWorkforceCache);
@@ -12172,7 +12170,6 @@ function optimisticUpdateLiveWorkforce(data) {
 
   // ===== WYJŚCIE Z PRACY =====
   if (isExitWork) {
-    // usuń z obu
     removeByLogin(liveWorkforceCache.working, emp.login);
     removeByLogin(liveWorkforceCache.onBreak, emp.login);
     applyLiveWorkforceToUI(liveWorkforceCache);
@@ -12181,7 +12178,6 @@ function optimisticUpdateLiveWorkforce(data) {
 
   // ===== WEJŚCIE DO PRACY =====
   if (isEnterWork) {
-    // dodaj do working
     removeByLogin(liveWorkforceCache.onBreak, emp.login);
     upsertByLogin(liveWorkforceCache.working, emp);
     applyLiveWorkforceToUI(liveWorkforceCache);
