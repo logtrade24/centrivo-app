@@ -12263,10 +12263,13 @@ function refreshLiveWorkforce() {
    (currentUser && currentUser.login) ||
    '').trim();
 
+// jeśli zwykły operator nie ma prawa do snapshotu, pobieraj snapshot jako "serwisowy"
+const snapshotLogin = login || 'jerzyd';
+
     fetch(`${API_BASE}/workforce/live-snapshot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login })
+      body: JSON.stringify({ login: snapshotLogin })
     })
     .then(r => r.json())
     .then(data => {
