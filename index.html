@@ -10638,11 +10638,26 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         return;
       }
     
+      // ✅ NATYCHMIAST w UI (tak jak ENTRY/EXIT)
+      try {
+        optimisticUpdateLiveWorkforce({
+          login: userToSave,
+          action: intent,               // BREAK_START / BREAK_END
+          department: deptToSave
+        });
+      } catch(e) {}
+    
+      // ✅ zapis + refresh snapshotu (tak jak przy dziale)
       apiScanIntent(intent, { department: deptToSave })
+        .then(() => {
+          refreshLiveWorkforce();
+          setTimeout(refreshLiveWorkforce, 600);
+        })
         .catch(err => {
           console.error('❌ BREAK API error:', err);
           showNotification('❌ Błąd zapisu przerwy: ' + (err?.message || err), 'error');
         });
+    
     } else {
       sendToSpreadsheetAsync(userToSave, deptToSave, action);
     }
