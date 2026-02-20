@@ -4961,6 +4961,7 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
   const data = {
     login: login,
     department: department,
+    
     action: action,
     timestamp: new Date().toISOString()
   };
@@ -12109,18 +12110,21 @@ function optimisticUpdateLiveWorkforce(data) {
   }
 
   const actionRaw = String(data.action || '');
-  const a = actionRaw
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+const a = actionRaw.toLowerCase();
+const A = actionRaw.toUpperCase();
 
-  const isBreak = a.includes('przerw') || a.includes('break');
-  const isReturn =
-    a.includes('wracam') ||
-    a.includes('powrot') ||
-    (isBreak && (a.includes('koniec') || a.includes('koncze')));
+// przerwa: łap zarówno polskie teksty jak i kody
+const isBreakStart =
+  a.includes('przerw') && (a.includes('wychod') || a.includes('start')) ||
+  A === 'BREAK_START' || A === 'BREAK_IN' || A === 'BREAKBEGIN';
 
-  const isBreakStart = isBreak && !isReturn;
+const isBreakEnd =
+  a.includes('przerw') && (a.includes('wracam') || a.includes('koniec') || a.includes('end')) ||
+  A === 'BREAK_END' || A === 'BREAK_OUT' || A === 'BREAKFINISH';
+
+// dla kompatybilności, jeśli gdzieś leci samo BREAK:
+const isBreak =
+  isBreakStart || isBreakEnd || A === 'BREAK' || a === 'break';
 
   const isEnterWork =
       a === 'entry' ||
