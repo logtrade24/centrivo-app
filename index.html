@@ -5052,6 +5052,7 @@ function checkSession() {
     setManagerButtons(String(loggedInUser || '').trim() === 'jerzyd');
 
     if (typeof showView === 'function') showView('department');
+      try { setupDepartmentTileBadges(); } catch(e) {}
     setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
     
     refreshLiveWorkforce();
@@ -12098,7 +12099,7 @@ function optimisticUpdateLiveWorkforce(data) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-  const isBreak = a.includes('przerw');
+  const isBreak = a.includes('przerw') || a.includes('break');
   const isReturn =
     a.includes('wracam') ||
     a.includes('powrot') ||
