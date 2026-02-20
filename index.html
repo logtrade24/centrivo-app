@@ -5811,12 +5811,13 @@ if (window.isChangingOperation && currentUser) {
     currentDepartment = deptId;
     window.isChangingOperation = false;
 
-    // wróć do widoku głównego
-    const titleEl = document.getElementById('actionViewTitle');
-    if (titleEl) titleEl.textContent = `Panel operatora - ${currentUser.login} (${deptName})`;
-
+    // wyjdź z trybu zmiany operacji
+    window.isChangingOperation = false;
+    
+    // wróć do widoku głównego (kafelki działów)
     showView('department');
-
+    ensureCodeInputFocus();
+    
     showNotification(`✅ ${currentUser.login}: Zmieniono operację na ${deptName}`, 'success');
 
     // optimistic od razu aktualizuj badge/liczniki
