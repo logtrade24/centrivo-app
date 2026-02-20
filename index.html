@@ -5866,10 +5866,12 @@ if (window.isChangingOperation && currentUser) {
               console.error('❌ CHANGE_DEPT API error:', err);
               showNotification('❌ Błąd zapisu zmiany operacji: ' + (err?.message || err), 'error');
             });
+        const userToSave = currentUser.login;   // ✅ zapamiętaj zanim wyzerujesz
         } else {
-          sendToSpreadsheet(currentUser.login, deptId, 'zmieniam-operacje');
+          sendToSpreadsheet(userToSave, deptId, 'zmieniam-operacje');
         }
-        showNotification(`Zmieniono operację: ${deptName}`, 'success');
+        
+        showNotification(`✅ Zmieniono operację: ${deptName}`, 'success');
         
         // wyjście z trybu zmiany operacji (żeby nie wisiał napis)
         window.isChangingOperation = false;
@@ -5886,7 +5888,6 @@ if (window.isChangingOperation && currentUser) {
         document.getElementById('welcomeHeader')?.classList.remove('show');
         showView('department');
         ensureCodeInputFocus();
-        showNotification('Gotowy do kolejnej operacji', 'info');
         
         return;
         }
