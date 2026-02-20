@@ -5834,6 +5834,7 @@ window.selectDepartment = function(deptId) {
         const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
         
         if (!hasAppsScript) {
+          optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'CHANGE_DEPT', department: deptToSave });
           apiScanIntent('CHANGE_DEPT', { department: deptToSave })
           .then(() => {
             refreshLiveWorkforce();
@@ -5861,6 +5862,7 @@ window.selectDepartment = function(deptId) {
         const hasAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
 
         if (!hasAppsScript) {
+          optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'CHANGE_DEPT', department: deptToSave });
           apiScanIntent('CHANGE_DEPT', { department: deptId })
             .catch(err => {
               console.error('❌ CHANGE_DEPT API error:', err);
@@ -6436,6 +6438,7 @@ window.selectDepartment = function(deptId) {
         
         // 2. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
         if (!hasAppsScript) {
+          optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'ENTRY', department: deptToSave });
           apiScanIntent('ENTRY', { department: deptToSave })
           .then(() => {
             refreshLiveWorkforce();
@@ -6476,6 +6479,7 @@ window.selectDepartment = function(deptId) {
         
         // 2. W TLE - zapis (Pages: API /scan + intent, GS: stary zapis)
         if (!hasAppsScript) {
+          optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'EXIT', department: deptToSave });
           apiScanIntent('EXIT', { department: deptToSave })
           .then(() => {
             refreshLiveWorkforce();
@@ -12103,13 +12107,16 @@ function optimisticUpdateLiveWorkforce(data) {
   const isBreakStart = isBreak && !isReturn;
 
   const isEnterWork =
-    a.includes('wchodz') || a.includes('start') || a.includes('loguje') || a.includes('zaczynam');
+      a === 'entry' ||
+      a.includes('wchodz') || a.includes('start') || a.includes('loguje') || a.includes('zaczynam');
 
   const isExitWork =
-    a.includes('wychodz') || a.includes('wylog') || (a.includes('koniec') && !isBreak);
-
+      a === 'exit' ||
+      a.includes('wychodz') || a.includes('wylog') || (a.includes('koniec') && !isBreak);
+    
   const isChangeOp =
-    a.includes('zmien') || a.includes('operac') || a.includes('operation');
+      a === 'change_dept' ||
+      a.includes('zmien') || a.includes('operac') || a.includes('operation');
 
   const emp = {
     login: currentUser.login,
