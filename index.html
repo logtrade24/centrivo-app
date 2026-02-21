@@ -4262,7 +4262,7 @@ function renderWorkersTable(shifts) {
             if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
             else timeInfo = durTxt;
           } else {
-            // fallback – stara logika (żeby nic się nie wywaliło zanim backend doślesz do /dashboard/full)
+            // fallback – stara logika
             const fromHM = shiftStartHM || '';
             const toHM = finished ? (shiftEndHM || '') : nowHM;
         
