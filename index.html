@@ -4472,6 +4472,9 @@ async function loadDashboardFull(showToast){
     if (st) st.textContent = data.timestamp ? `✅ ${formatPlDateTime(data.timestamp)}` : '✅ OK';
     if (showToast) try { showNotification('Dashboard odświeżony', 'success'); } catch(e) {}
 
+      // historia nieobecności
+      await loadAbsenceHistory(null);
+
   }catch(e){
     console.error('Dashboard full error:', e);
     if (st) st.textContent = `❌ ${e.message || e}`;
