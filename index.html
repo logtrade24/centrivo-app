@@ -3944,16 +3944,12 @@ function dashFillShiftOptions(shiftKeys){
 
   sel.innerHTML =
     `<option value="ALL">Wszystkie zmiany</option>` +
+    `<option value="ACTIVE">Aktywne zmiany</option>` +
     list.map(k => `<option value="${String(k).replace(/"/g,'&quot;')}">${k}</option>`).join('');
 
-  sel.value = list.includes(current) ? current : 'ALL';
-}
-
-function dashSetShiftFilter(val){
-  dashShiftFilter = String(val || 'ALL').trim() || 'ALL';
-
-  // ✅ tylko render z cache (bez fetch)
-  if (dashFullCache) dashApplyFiltersAndRender();
+  // zachowaj wybór jeśli nadal istnieje
+  const allowed = new Set(['ALL','ACTIVE', ...list]);
+  sel.value = allowed.has(current) ? current : 'ALL';
 }
 
 function dashFillDeptOptions(depts){
@@ -3984,10 +3980,22 @@ function dashFillDeptOptions(depts){
 function dashSetDeptFilter(dept){
   dashDeptFilter = String(dept || 'ALL').trim() || 'ALL';
 
+  // reset filtra zmiany przy zmianie działu
+  dashShiftFilter = 'ALL';
+  const shiftSel = document.getElementById('dashShiftFilter');
+  if (shiftSel) shiftSel.value = 'ALL';
+
   const hint = document.getElementById('dashDeptHint');
   if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
 
-  // ✅ tylko render z cache (bez fetch)
+  // ✅ render bez fetcha
+  if (dashFullCache) dashApplyFiltersAndRender();
+}
+
+    function dashSetShiftFilter(val){
+  dashShiftFilter = String(val || 'ALL').trim() || 'ALL';
+
+  // ✅ render bez fetcha
   if (dashFullCache) dashApplyFiltersAndRender();
 }
 
@@ -4075,21 +4083,6 @@ function dashFillDeptOptions(depts){
     list.map(d => `<option value="${String(d).replace(/"/g,'&quot;')}">${d}</option>`).join('');
 
   sel.value = list.includes(current) ? current : 'ALL';
-}
-
-function dashSetDeptFilter(dept){
-  dashDeptFilter = String(dept || 'ALL').trim() || 'ALL';
-
-  // reset filtra zmiany przy zmianie działu
-  dashShiftFilter = 'ALL';
-  const shiftSel = document.getElementById('dashShiftFilter');
-  if (shiftSel) shiftSel.value = 'ALL';
-
-  const hint = document.getElementById('dashDeptHint');
-  if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
-
-  // dział wymaga fetcha (bo backend filtruje dane)
-  loadDashboardFull(false);
 }
 
 async function apiDashboardFull(){
@@ -4399,117 +4392,141 @@ function refreshAbsenceHistory(){
   const allShifts = src.shifts || {};
   const allKeys = Object.keys(allShifts).sort((a,b)=>a.localeCompare(b));
 
-  // dropdown zmian (zawsze pełna lista)
+  // select zmian ma ZAWSZE pełną listę + ACTIVE
   dashFillShiftOptions(allKeys);
 
-  // 1) filtr po zmianie
-  const keys = (dashShiftFilter === 'ALL')
-    ? allKeys
-    : allKeys.filter(k => k === dashShiftFilter);
+  const deptNorm = String(dashDeptFilter || 'ALL').trim().toLowerCase();
 
-  // 2) filtr po dziale: zostaw tylko zmiany gdzie w danym dziale ktoś PRACUJE albo ma PRZERWĘ
-  // (dla ALL: nie filtrujemy po dziale)
+  // helper: czy worker należy do wybranego działu
+  function workerInDept(w){
+    if (deptNorm === 'all') return true;
+
+    const baseDept = String(w?.dept || w?.department || w?.baseDept || '').trim().toLowerCase();
+    const currentDept = String(w?.currentStatus?.currentDepartment || w?.currentDepartment || '').trim().toLowerCase();
+
+    return currentDept === deptNorm || baseDept === deptNorm;
+  }
+
+  // helper: czy worker jest “obecny” teraz (pracuje lub przerwa)
+  function workerIsPresentNow(w){
+    const k = String(w?.currentStatus?.statusKey || '').toLowerCase();
+    return (k === 'working' || k === 'break');
+  }
+
+  // helper: czy worker ma usprawiedliwioną absencję
+  function workerIsJustified(w){
+    const k = String(w?.currentStatus?.statusKey || '').toLowerCase();
+    return (k === 'vacation' || k === 'l4' || k === 'dayoff' || k === 'occasional');
+  }
+
+  // helper: czy zmiana jest “aktywna” (ma choć 1 osobę obecna teraz)
+  function shiftIsActiveNow(shift){
+    const planned = Array.isArray(shift?.planned) ? shift.planned : [];
+    return planned.some(w => workerInDept(w) && workerIsPresentNow(w));
+  }
+
+  // ===== 1) Ustalamy zakres zmian do renderu (Zmiany-obsada + tabela) =====
+  // ALL: wszystkie zmiany
+  // ACTIVE: tylko zmiany aktywne “tu i teraz”
+  // konkret: tylko ta zmiana
+  //
+  // dodatkowa zasada: jeśli wybrany dział (nie ALL) i filtr zmian = ALL,
+  // to pokazujemy tylko zmiany AKTYWNE dla tego działu (tak jak chcesz)
+  let keysToRender = [];
+
+  if (dashShiftFilter === 'ALL'){
+    if (dashDeptFilter !== 'ALL'){
+      // dział wybrany -> tylko aktywne zmiany w tym dziale
+      keysToRender = allKeys.filter(k => shiftIsActiveNow(allShifts[k]));
+    } else {
+      // cała firma -> wszystkie zmiany
+      keysToRender = allKeys.slice();
+    }
+  } else if (dashShiftFilter === 'ACTIVE'){
+    keysToRender = allKeys.filter(k => shiftIsActiveNow(allShifts[k]));
+  } else {
+    // konkretna zmiana
+    keysToRender = allKeys.filter(k => k === dashShiftFilter);
+  }
+
+  // ===== 2) Przygotuj przefiltrowane shifty (przycinamy workersów do działu) =====
   const filteredShifts = {};
-  for (const k of keys){
+  for (const k of keysToRender){
     const sh = allShifts[k];
     if (!sh) continue;
 
-    if (dashDeptFilter === 'ALL'){
-      filteredShifts[k] = sh;
-      continue;
-    }
+    const planned = Array.isArray(sh.planned) ? sh.planned : [];
+    const plannedFiltered = planned.filter(workerInDept);
 
-    // próbujemy znaleźć pole z listą pracowników w zmianie
-    const planned = Array.isArray(sh.planned) ? sh.planned : (Array.isArray(sh.workers) ? sh.workers : []);
-    if (!planned.length) continue;
+    // jeśli dział wybrany i po filtrze działu nic nie zostało, to nie pokazuj tej zmiany
+    if (dashDeptFilter !== 'ALL' && plannedFiltered.length === 0) continue;
 
-    const deptNorm = String(dashDeptFilter).trim().toLowerCase();
-
-    // czy jest choć 1 osoba z tego działu, która pracuje albo jest na przerwie
-    const hasActiveInDept = planned.some(w => {
-      const d = String(w.dept || w.department || w.currentDept || w.baseDept || '').trim().toLowerCase();
-      if (d !== deptNorm) return false;
-
-      const st = String(
-        w.currentStatus?.statusKey ||
-        w.statusKey ||
-        w.status ||
-        ''
-      ).toLowerCase();
-
-      return (st.includes('working') || st.includes('pracuje') || st === 'pracuje' || st.includes('onbreak') || st.includes('przerwa') || st === 'przerwa');
-    });
-
-    if (hasActiveInDept){
-      filteredShifts[k] = sh;
-    }
+    filteredShifts[k] = {
+      ...sh,
+      planned: plannedFiltered
+    };
   }
 
-  // 3) przelicz kafelki wg przefiltrowanych zmian
-  let plannedAll = 0;              // wszystkie zmiany (po filtrach)
-  let activePlanned = 0;           // tylko aktywne zmiany
+  const finalKeys = Object.keys(filteredShifts).sort((a,b)=>a.localeCompare(b));
+
+  // ===== 3) KAFELKI =====
+  // ZAPLANOWANO (wszystkie zmiany): licz z pełnego planu (wszystkie zmiany), ale po filtrze działu
+  let plannedAll = 0;
+  for (const k of allKeys){
+    const sh = allShifts[k];
+    if (!sh) continue;
+    const planned = Array.isArray(sh.planned) ? sh.planned : [];
+    plannedAll += planned.filter(workerInDept).length;
+  }
+
+  // Dla reszty liczymy względem aktywnych zmian (wg Twojej definicji “tu i teraz”)
+  // Aktywne zmiany do liczenia: zależą od filtra zmian:
+  // - jeśli wybrana konkretna -> liczymy tę jedną zmianę
+  // - jeśli ACTIVE -> aktywne
+  // - jeśli ALL -> aktywne (dla dept) albo aktywne (dla firmy) — bo mówisz “nieobecni względem aktywnych”
+  let keysForActiveCounts = [];
+
+  if (dashShiftFilter && dashShiftFilter !== 'ALL' && dashShiftFilter !== 'ACTIVE'){
+    keysForActiveCounts = allKeys.filter(k => k === dashShiftFilter);
+  } else {
+    keysForActiveCounts = allKeys.filter(k => shiftIsActiveNow(allShifts[k]));
+  }
+
+  // liczymy na podstawie workersów w aktywnych zmianach
+  let plannedActive = 0;
   let presentActive = 0;
   let onBreakActive = 0;
 
-  let absentActive = 0;
-  let vacationActive = 0;
-  let l4Active = 0;
-  let otherActive = 0;
+  let justifiedActive = 0;
 
-  // do frekwencji liczymy “plan bez nieobecności uspraw.”
-  let denomActive = 0;
+  for (const k of keysForActiveCounts){
+    const sh = allShifts[k];
+    if (!sh) continue;
 
-  Object.entries(filteredShifts).forEach(([shiftKey, sh]) => {
-    const planned = Array.isArray(sh.planned) ? sh.planned : (Array.isArray(sh.workers) ? sh.workers : []);
-    plannedAll += planned.length;
+    const planned = Array.isArray(sh.planned) ? sh.planned : [];
+    const people = planned.filter(workerInDept);
 
-    const started = !!sh.started; // u Ciebie tak jest w stylu DBK
-    if (!started) return;
+    plannedActive += people.length;
 
-    // liczenie statusów z listy (najpewniejsze)
-    let p = 0, br = 0, ab = 0, vac = 0, l4 = 0, oth = 0, dayoff = 0, occ = 0;
+    for (const w of people){
+      const sk = String(w?.currentStatus?.statusKey || '').toLowerCase();
 
-    planned.forEach(w => {
-      // filtrowanie po dziale na poziomie osoby (dla ALL zostaje)
-      if (dashDeptFilter !== 'ALL'){
-        const deptNorm = String(dashDeptFilter).trim().toLowerCase();
-        const d = String(w.dept || w.department || w.currentDept || w.baseDept || '').trim().toLowerCase();
-        if (d !== deptNorm) return;
-      }
+      if (sk === 'working') presentActive += 1;
+      else if (sk === 'break'){ presentActive += 1; onBreakActive += 1; }
+      else if (workerIsJustified(w)) justifiedActive += 1;
+    }
+  }
 
-      const sk = String(w.currentStatus?.statusKey || w.statusKey || '').toLowerCase();
-      const st = String(w.currentStatus?.statusText || w.status || '').toLowerCase();
+  // NIEOBECNI (aktywne zmiany): plan aktywnych - zalogowani - usprawiedliwieni
+  // (na razie “zalogowani” = pracuje/przerwa TERAZ; jak podepniemy logi, będzie “kto miał jakiekolwiek ENTRY w dniu”)
+  const absentActive = Math.max(0, plannedActive - presentActive - justifiedActive);
 
-      const key = sk || st;
-
-      if (key.includes('working') || key.includes('pracuje')) p++;
-      else if (key.includes('break') || key.includes('przerwa')) { br++; p++; }
-      else if (key.includes('vacation') || key.includes('urlop')) vac++;
-      else if (key.includes('l4')) l4++;
-      else if (key.includes('dayoff') || key.includes('dzień wolny')) dayoff++;
-      else if (key.includes('occasional') || key.includes('okolicz')) occ++;
-      else if (key.includes('absent') || key.includes('nieobec')) ab++;
-      else oth++;
-    });
-
-    const plannedActiveThis = (dashDeptFilter === 'ALL') ? planned.length : (p + ab + vac + l4 + dayoff + occ + oth);
-    activePlanned += plannedActiveThis;
-
-    presentActive += p;
-    onBreakActive += br;
-    absentActive += ab;
-    vacationActive += vac;
-    l4Active += l4;
-    otherActive += (oth + dayoff + occ);
-
-    const withoutAbs = Math.max(0, plannedActiveThis - vac - l4 - dayoff - occ);
-    denomActive += withoutAbs;
-  });
+  // frekwencja: obecni / (plan aktywnych - usprawiedliwieni)
+  const denom = Math.max(0, plannedActive - justifiedActive);
+  const frekw = denom > 0 ? Math.round((presentActive / denom) * 100) : 0;
 
   const workNow = Math.max(0, presentActive - onBreakActive);
-  const frekw = denomActive > 0 ? Math.round((presentActive / denomActive) * 100) : 0;
 
-  // update kafelków
   const sumPlanned  = document.getElementById('sumPlanned');
   const sumPresent  = document.getElementById('sumPresent');
   const sumAbsent   = document.getElementById('sumAbsent');
@@ -4519,166 +4536,74 @@ function refreshAbsenceHistory(){
   const sumFrekw    = document.getElementById('sumFrekw');
   const split       = document.getElementById('sumPresentSplit');
 
-  if (sumPlanned)  sumPlanned.textContent  = String(plannedAll);
-  if (sumPresent)  sumPresent.textContent  = String(presentActive);
-  if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${workNow}<br>🟡&nbsp;Przerwa: ${onBreakActive}`;
-  if (sumAbsent)   sumAbsent.textContent   = String(absentActive);
-  if (sumVacation) sumVacation.textContent = String(vacationActive);
-  if (sumL4)       sumL4.textContent       = String(l4Active);
-  if (sumOther)    sumOther.textContent    = String(otherActive);
-  if (sumFrekw)    sumFrekw.textContent    = `${frekw}%`;
+  if (sumPlanned) sumPlanned.textContent = String(plannedAll);
+  if (sumPresent) sumPresent.textContent = String(presentActive);
+  if (split) split.innerHTML = `✅&nbsp;Pracuje: ${workNow}<br>🟡&nbsp;Przerwa: ${onBreakActive}`;
+  if (sumAbsent) sumAbsent.textContent = String(absentActive);
 
-  // 4) TOP działy: licz z workersów “pracuje” po filtrach (dział filtr działa jako ALL albo konkret)
+  // usprawiedliwione rozbijamy na kafelki z aktywnych zmian (żeby miało sens)
+  // (na razie sumujemy po statusKey z aktywnych)
+  let vac = 0, l4 = 0, oth = 0;
+  for (const k of keysForActiveCounts){
+    const sh = allShifts[k];
+    if (!sh) continue;
+    const planned = Array.isArray(sh.planned) ? sh.planned : [];
+    for (const w of planned.filter(workerInDept)){
+      const sk = String(w?.currentStatus?.statusKey || '').toLowerCase();
+      if (sk === 'vacation') vac++;
+      else if (sk === 'l4') l4++;
+      else if (sk === 'dayoff' || sk === 'occasional') oth++;
+    }
+  }
+
+  if (sumVacation) sumVacation.textContent = String(vac);
+  if (sumL4) sumL4.textContent = String(l4);
+  if (sumOther) sumOther.textContent = String(oth);
+  if (sumFrekw) sumFrekw.textContent = `${frekw}%`;
+
+  // ===== 4) TOP / DZIAŁ (PRACUJE) =====
   const topBox = document.getElementById('dashTopBox');
   const topList = document.getElementById('dashTopList');
 
   if (topBox && topList){
-    const m = new Map();
-    Object.values(filteredShifts).forEach(sh => {
-      const planned = Array.isArray(sh.planned) ? sh.planned : (Array.isArray(sh.workers) ? sh.workers : []);
-      planned.forEach(w => {
-        const st = String(w.currentStatus?.statusKey || w.statusKey || w.status || '').toLowerCase();
-        const isWork = (st.includes('working') || st.includes('pracuje'));
-
-        if (!isWork) return;
-
-        const dept = String(w.dept || w.department || w.currentDept || w.baseDept || '-').trim();
-        if (dashDeptFilter !== 'ALL' && dept.toLowerCase() !== String(dashDeptFilter).trim().toLowerCase()) return;
-
-        m.set(dept, (m.get(dept) || 0) + 1);
-      });
-    });
-
-    const top = [...m.entries()]
-      .map(([dept,count]) => ({ dept, count }))
-      .sort((a,b)=>b.count-a.count)
-      .slice(0, 6);
-
-    if (top.length){
+    if (dashDeptFilter !== 'ALL'){
       topBox.style.display = 'block';
-      topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
+      const title = topBox.querySelector('.dash-top-title');
+      if (title) title.textContent = 'Dział (pracuje)';
+      topList.innerHTML = `<div class="dash-top-row"><div>${dashDeptFilter}</div><div>${workNow}</div></div>`;
     } else {
-      topBox.style.display = 'none';
-      topList.innerHTML = '';
+      // firma: top z danych z backendu (bez kombinowania)
+      const top = Array.isArray(src.topDepts) ? src.topDepts : [];
+      if (top.length){
+        topBox.style.display = 'block';
+        const title = topBox.querySelector('.dash-top-title');
+        if (title) title.textContent = 'Top działy (pracuje)';
+        topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
+      } else {
+        topBox.style.display = 'none';
+        topList.innerHTML = '';
+      }
     }
   }
 
-  // 5) render sekcji (zmiany-obsada + tabela) na bazie przefiltrowanych zmian
+  // ===== 5) Render sekcji =====
   renderDashboardFromFullCache({ ...src, shifts: filteredShifts });
 }
 
-    function renderDashboardFromFullCache(data){
-  const allShifts = data.shifts || {};
-  const allKeys = Object.keys(allShifts).sort((a,b)=>a.localeCompare(b));
+   function renderDashboardFromFullCache(data){
+  const shifts = data?.shifts || {};
+  const keys = Object.keys(shifts).sort((a,b)=>a.localeCompare(b));
 
-  // wypełnij opcje zmian
-  dashFillShiftOptions(allKeys);
-
-  // 1) filtr aktywnych zmian przy wybranym dziale:
-  //    pokazuj tylko takie zmiany, gdzie jest choć 1 osoba PRACUJE lub PRZERWA
-  let activeKeys = allKeys;
-  if (dashDeptFilter !== 'ALL'){
-    activeKeys = allKeys.filter(k => {
-      const s = allShifts[k] || {};
-      const planned = Array.isArray(s.planned) ? s.planned : [];
-      return planned.some(w => {
-        const st = w?.currentStatus?.statusKey;
-        return st === 'working' || st === 'break';
-      });
-    });
-  }
-
-  // 2) filtr konkretnej zmiany
-  let keys = activeKeys;
-  if (dashShiftFilter !== 'ALL'){
-    keys = activeKeys.filter(k => k === dashShiftFilter);
-  }
-
-  // jeśli filtr zmiany wskazuje coś co zniknęło po filtrze działu, reset
-  if (dashShiftFilter !== 'ALL' && keys.length === 0){
-    dashShiftFilter = 'ALL';
-    const sel = document.getElementById('dashShiftFilter');
-    if (sel) sel.value = 'ALL';
-    keys = activeKeys;
-  }
-
-  // przygotuj obiekt przefiltrowanych zmian (dla tabeli)
-  const filteredShifts = {};
-  keys.forEach(k => { filteredShifts[k] = allShifts[k]; });
-
-  // ===== KAFELKI (liczymy z tego co widać) =====
-  let planned = 0, present = 0, absent = 0, vacation = 0, l4 = 0, dayOff = 0, occasional = 0, onBreak = 0;
-
-  for (const k of keys){
-    const s = allShifts[k] || {};
-    planned += (Array.isArray(s.planned) ? s.planned.length : 0);
-    present += Number(s.present || 0);
-    absent  += Number(s.absent || 0);
-    vacation += Number(s.vacation || 0);
-    l4 += Number(s.l4 || 0);
-    dayOff += Number(s.dayOff || 0);
-    occasional += Number(s.occasional || 0);
-    onBreak += Number(s.onBreak || 0);
-  }
-
-  const otherAbsences = dayOff + occasional;
-  const work = Math.max(0, present - onBreak);
-  const frekwencja = planned > 0 ? Math.round((present / planned) * 100) : 0;
-
-  const sumPlanned  = document.getElementById('sumPlanned');
-  const sumPresent  = document.getElementById('sumPresent');
-  const sumAbsent   = document.getElementById('sumAbsent');
-  const sumVacation = document.getElementById('sumVacation');
-  const sumL4       = document.getElementById('sumL4');
-  const sumOther    = document.getElementById('sumOther');
-  const sumFrekw    = document.getElementById('sumFrekw');
-  const split       = document.getElementById('sumPresentSplit');
-
-  if (sumPlanned)  sumPlanned.textContent  = String(planned);
-  if (sumPresent)  sumPresent.textContent  = String(present);
-  if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${work} &nbsp; &nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
-  if (sumAbsent)   sumAbsent.textContent   = String(absent);
-  if (sumVacation) sumVacation.textContent = String(vacation);
-  if (sumL4)       sumL4.textContent       = String(l4);
-  if (sumOther)    sumOther.textContent    = String(otherAbsences);
-  if (sumFrekw)    sumFrekw.textContent    = `${frekwencja}%`;
-
-  // ===== TOP DZIAŁY =====
-  const topBox = document.getElementById('dashTopBox');
-  const topList = document.getElementById('dashTopList');
-
-  if (topBox && topList){
-    let top = Array.isArray(data.topDepts) ? data.topDepts : [];
-
-    // przy filtrze działu pokazujemy 1 wiersz: dział + liczba pracujących z przefiltrowanego widoku
-    if (dashDeptFilter !== 'ALL'){
-      top = [{ dept: dashDeptFilter, count: work }];
-      const title = topBox.querySelector('.dash-top-title');
-      if (title) title.textContent = 'Dział (pracuje)';
-    } else {
-      const title = topBox.querySelector('.dash-top-title');
-      if (title) title.textContent = 'Top działy (pracuje)';
-    }
-
-    if (top.length){
-      topBox.style.display = 'block';
-      topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
-    } else {
-      topBox.style.display = 'none';
-      topList.innerHTML = '';
-    }
-  }
-
-  // ===== RENDER ZMIANY =====
+  // render Zmiany – obsada
   const shiftsBox = document.getElementById('dashShifts');
   if (shiftsBox){
-    shiftsBox.innerHTML = keys.map(k => renderShiftCard(allShifts[k], k)).join('');
+    shiftsBox.innerHTML = keys.map(k => renderShiftCard(shifts[k], k)).join('');
   }
 
-  // ===== RENDER TABELI PRACOWNIKÓW =====
+  // render tabela pracowników
   const workersBox = document.getElementById('dashWorkers');
   if (workersBox){
-    workersBox.innerHTML = renderWorkersTable(filteredShifts);
+    workersBox.innerHTML = renderWorkersTable(shifts);
   }
 }
 
