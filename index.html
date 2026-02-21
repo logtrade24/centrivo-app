@@ -2758,8 +2758,24 @@ body.modal-open{
               <button class="back-button" onclick="closeDashboard()">← Powrót</button>
             
               <h2 class="view-title">Dashboard</h2>
+
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 10px 0 14px 0;">
+                  <div style="font-weight:900; opacity:0.9;">Filtr działu:</div>
+                  <select id="dashDeptFilter" class="code-input" style="width:260px; max-width: 100%;" onchange="dashSetDeptFilter(this.value)">
+                    <option value="ALL">Wszystkie działy</option>
+                  </select>
+                  <div id="dashDeptHint" style="opacity:0.85; font-size:13px;"></div>
+                </div>
             
               <div class="dash-grid">
+                  <div class="dash-card">
+                      <div class="dash-label">Obecni</div>
+                      <div class="dash-value" id="dashPresent">—</div>
+                      <div id="dashPresentSplit" style="margin-top:6px; font-size:13px; font-weight:800; opacity:0.9;">
+                        ✅ Pracuje: — &nbsp;|&nbsp; 🟡 Przerwa: —
+                      </div>
+                    </div>
+                  
                 <div class="dash-card">
                   <div class="dash-label">Pracuje</div>
                   <div class="dash-value" id="dashWorking">—</div>
