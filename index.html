@@ -267,6 +267,76 @@ Wersja: 2.0
             display: block;
         }
 
+        /* ===== DASHBOARD ===== */
+        .dash-grid{
+          display:grid;
+          grid-template-columns: repeat(3, minmax(160px, 1fr));
+          gap: 14px;
+          margin: 10px 0 16px;
+        }
+        
+        @media (max-width: 900px){
+          .dash-grid{ grid-template-columns: 1fr; }
+        }
+        
+        .dash-card{
+          background:#fff;
+          border:1px solid #e9ecef;
+          border-radius: 12px;
+          padding: 14px 16px;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+        }
+        
+        .dash-label{
+          font-size: 13px;
+          color:#6c757d;
+          font-weight: 700;
+          margin-bottom: 6px;
+        }
+        
+        .dash-value{
+          font-size: 34px;
+          font-weight: 900;
+          color:#212529;
+          line-height: 1;
+        }
+        
+        .dash-actions{
+          display:flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items:center;
+          justify-content:center;
+          margin: 8px 0 10px;
+        }
+        
+        .dash-status{
+          font-weight: 800;
+          color:#495057;
+        }
+        
+        .dash-top{
+          margin-top: 14px;
+          background:#fff;
+          border:1px solid #e9ecef;
+          border-radius: 12px;
+          padding: 12px 14px;
+        }
+        
+        .dash-top-title{
+          font-weight: 900;
+          margin-bottom: 8px;
+          color:#212529;
+        }
+        
+        .dash-top-row{
+          display:flex;
+          justify-content: space-between;
+          padding: 8px 6px;
+          border-top: 1px solid #f1f3f5;
+          font-weight: 700;
+        }
+
         .view-title {
             text-align: center;
             margin-bottom: 30px;
@@ -2651,14 +2721,13 @@ body.modal-open{
     </div>
 </div>
             <div style="text-align: center; margin-top: 30px;">
-              <a href="#"
-                target="_blank"
-                class="dashboard-btn"
-                id="dashboardBtn"
-                style="display: none;"
-                onclick="openDashboard(); return false;">
-                📊 Otwórz Dashboard
-              </a>
+              <button
+                  class="dashboard-btn"
+                  id="dashboardBtn"
+                  style="display: none;"
+                  onclick="openDashboard();">
+                  📊 Dashboard
+                </button>
 
               <button id="announcementsBtn"
                       onclick="openAnnouncementsPanel()"
@@ -2683,6 +2752,48 @@ body.modal-open{
             </div>
 
             </div> <!-- zamknięcie: #departmentView -->
+            <!-- WIDOK DASHBOARD (KIEROWNIK) -->
+            <div class="view" id="dashboardView">
+            
+              <button class="back-button" onclick="closeDashboard()">← Powrót</button>
+            
+              <h2 class="view-title">Dashboard</h2>
+            
+              <div class="dash-grid">
+                <div class="dash-card">
+                  <div class="dash-label">Pracuje</div>
+                  <div class="dash-value" id="dashWorking">—</div>
+                </div>
+            
+                <div class="dash-card">
+                  <div class="dash-label">Na przerwie</div>
+                  <div class="dash-value" id="dashBreak">—</div>
+                </div>
+            
+                <div class="dash-card">
+                  <div class="dash-label">Nieobecni</div>
+                  <div class="dash-value" id="dashAbsent">—</div>
+                </div>
+              </div>
+            
+              <div class="dash-actions">
+                <button class="dashboard-btn" onclick="loadDashboardSnapshot(true)" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+                  🔄 Odśwież
+                </button>
+            
+                <button class="dashboard-btn" onclick="openWorkforceLiveModal()" style="background: linear-gradient(135deg, #6633FF 0%, #3b82f6 100%);">
+                  👁️ LIVE
+                </button>
+            
+                <div id="dashStatus" class="dash-status"></div>
+              </div>
+            
+              <div class="dash-top" id="dashTopBox" style="display:none;">
+                <div class="dash-top-title">Top działy (pracuje)</div>
+                <div id="dashTopList"></div>
+              </div>
+            
+            </div>
 
             <!-- WIDOK WYBORU PRACOWNIKA -->
             <div class="view" id="userView">
@@ -3611,6 +3722,65 @@ async function apiScan(code){
   return data;
 }
 
+    async function apiDashboardSnapshot(){
+  const login = String(sessionStorage.getItem('loggedInUser') || '').trim().toLowerCase();
+  if (!login) throw new Error('Brak loginu w sesji.');
+
+  const r = await fetch(`${API_BASE}/dashboard/snapshot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function loadDashboardSnapshot(showToast){
+  const st = document.getElementById('dashStatus');
+  if (st) st.textContent = '⏳ Ładuję...';
+
+  try{
+    const data = await apiDashboardSnapshot();
+    if (!data?.success) throw new Error(data?.message || 'Błąd danych');
+
+    const w = document.getElementById('dashWorking');
+    const b = document.getElementById('dashBreak');
+    const a = document.getElementById('dashAbsent');
+
+    if (w) w.textContent = String(data.working ?? 0);
+    if (b) b.textContent = String(data.onBreak ?? 0);
+    if (a) a.textContent = String(data.absent ?? 0);
+
+    // top działy
+    const topBox = document.getElementById('dashTopBox');
+    const topList = document.getElementById('dashTopList');
+    const top = Array.isArray(data.topDepts) ? data.topDepts : [];
+
+    if (topBox && topList){
+      if (top.length){
+        topBox.style.display = 'block';
+        topList.innerHTML = top.map(x => {
+          const dept = String(x.dept || '-');
+          const cnt  = String(x.count || 0);
+          return `<div class="dash-top-row"><div>${dept}</div><div>${cnt}</div></div>`;
+        }).join('');
+      } else {
+        topBox.style.display = 'none';
+        topList.innerHTML = '';
+      }
+    }
+
+    if (st) st.textContent = data.timestamp ? `✅ ${formatPlDateTime(data.timestamp)}` : '✅ OK';
+    if (showToast) try { showNotification('Dashboard odświeżony', 'success'); } catch(e) {}
+  }catch(e){
+    console.error('Dashboard snapshot error:', e);
+    if (st) st.textContent = `❌ ${e.message || e}`;
+    if (showToast) try { showNotification('Błąd pobrania dashboardu', 'error'); } catch(e2) {}
+  }
+}
+
     async function apiScanIntent(intent, extra){
   const code = sessionStorage.getItem('currentEmployeeCode');
 
@@ -3733,11 +3903,13 @@ async function apiCreateAnnouncement(login, typ, tresc, dataWaznosci, odbiorcy, 
  * @param {Function} onError - Co zrobić gdy backend zwróci błąd (opcjonalne)
  */
 function openDashboard() {
-  google.script.run
-    .withSuccessHandler(function(url) {
-      window.open(url + '?page=dashboard', '_blank');
-    })
-    .getAppUrl();
+  showView('dashboard');
+  loadDashboardSnapshot(true);
+}
+
+function closeDashboard(){
+  showView('department');
+  try { focusEanInput(); } catch(e) {}
 }
 
 function liveAutoFitModal(rowsCount){
