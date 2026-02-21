@@ -2955,7 +2955,7 @@ body.dark-mode .progress-bar{ background: rgba(255,255,255,0.10); }
     <div class="dbk-card">
       <div class="dbk-title">✅ OBECNI</div>
       <div class="dbk-val" id="sumPresent">—</div>
-      <div class="dbk-sub" id="sumPresentSplit">✅ Pracuje: — | 🟡 Przerwa: —</div>
+      <div class="dbk-sub" id="sumPresentSplit">✅&nbsp;Pracuje: — | 🟡&nbsp;Przerwa: —</div>
     </div>
 
     <div class="dbk-card"><div class="dbk-title">❌ NIEOBECNI</div><div class="dbk-val" id="sumAbsent">—</div></div>
@@ -4307,7 +4307,7 @@ async function loadDashboardFull(showToast){
 
     if (sumPlanned) sumPlanned.textContent = String(o.planned ?? 0);
     if (sumPresent) sumPresent.textContent = String(o.present ?? 0);
-    if (split) split.innerHTML = `✅ Pracuje: ${work} &nbsp;|  &nbsp; 🟡 Przerwa: ${onBreak}`;
+    if (split) split.innerHTML = `✅&nbsp;Pracuje: ${work} &nbsp;|&nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
     if (sumAbsent) sumAbsent.textContent = String(o.absent ?? 0);
     if (sumVacation) sumVacation.textContent = String(o.vacation ?? 0);
     if (sumL4) sumL4.textContent = String(o.l4 ?? 0);
