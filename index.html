@@ -2946,6 +2946,10 @@ body.dark-mode .progress-bar{ background: rgba(255,255,255,0.10); }
       <option value="ALL">Wszystkie działy</option>
     </select>
 
+      <select id="dashShiftFilter" class="code-input dash-filter-select" style="width:220px;" onchange="dashSetShiftFilter(this.value)">
+          <option value="ALL">Wszystkie zmiany</option>
+        </select>
+
     <div id="dashDeptHint" class="dash-filter-hint">Widok: cała firma</div>
   </div>
 
@@ -3928,7 +3932,28 @@ async function apiScan(code){
 }
 
     let dashSnapshotCache = null;
-let dashDeptFilter = 'ALL';
+    let dashDeptFilter = 'ALL';
+    let dashShiftFilter = 'ALL';
+
+function dashFillShiftOptions(shiftKeys){
+  const sel = document.getElementById('dashShiftFilter');
+  if (!sel) return;
+
+  const current = sel.value || 'ALL';
+  const list = Array.isArray(shiftKeys) ? shiftKeys : [];
+
+  sel.innerHTML =
+    `<option value="ALL">Wszystkie zmiany</option>` +
+    list.map(k => `<option value="${String(k).replace(/"/g,'&quot;')}">${k}</option>`).join('');
+
+  sel.value = list.includes(current) ? current : 'ALL';
+}
+
+function dashSetShiftFilter(val){
+  dashShiftFilter = String(val || 'ALL').trim() || 'ALL';
+  // nie robimy nowego fetch’a, tylko przerender z cache:
+  if (dashSnapshotCache) renderDashboardFromFullCache(dashSnapshotCache);
+}
 
 function dashFillDeptOptions(depts){
   const sel = document.getElementById('dashDeptFilter');
@@ -4276,6 +4301,44 @@ function refreshAbsenceHistory(){
   loadAbsenceHistory(v);
 }
 
+    function renderDashboardFromFullCache(data){
+  // TOP działy
+  const topBox = document.getElementById('dashTopBox');
+  const topList = document.getElementById('dashTopList');
+  const top = Array.isArray(data.topDepts) ? data.topDepts : [];
+  if (topBox && topList){
+    if (top.length){
+      topBox.style.display = 'block';
+      topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
+    } else {
+      topBox.style.display = 'none';
+      topList.innerHTML = '';
+    }
+  }
+
+  // SHIFTS (z filtrem)
+  const allShifts = data.shifts || {};
+  const allKeys = Object.keys(allShifts).sort((a,b)=>a.localeCompare(b));
+
+  dashFillShiftOptions(allKeys);
+
+  const keys = (dashShiftFilter === 'ALL') ? allKeys : allKeys.filter(k => k === dashShiftFilter);
+
+  const shiftsBox = document.getElementById('dashShifts');
+  if (shiftsBox){
+    shiftsBox.innerHTML = keys.map(k => renderShiftCard(allShifts[k], k)).join('');
+  }
+
+  // workers table (z filtrem)
+  const filteredShifts = {};
+  keys.forEach(k => { filteredShifts[k] = allShifts[k]; });
+
+  const workersBox = document.getElementById('dashWorkers');
+  if (workersBox){
+    workersBox.innerHTML = renderWorkersTable(filteredShifts);
+  }
+}
+
 async function loadDashboardFull(showToast){
   const st = document.getElementById('dashStatus');
   if (st) st.textContent = '⏳ Ładuję...';
@@ -4284,69 +4347,46 @@ async function loadDashboardFull(showToast){
     const data = await apiDashboardFull();
     if (!data?.success) throw new Error(data?.message || 'Błąd danych');
 
+    // cache pod filtry (dział / zmiana)
     dashFullCache = data;
 
+    // uzupełnij listę działów
     dashFillDeptOptions(data.depts || []);
     const hint = document.getElementById('dashDeptHint');
     if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
 
     // kafelki
     const o = data.overall || {};
-    const working = (o.present || 0) - (Object.values(data.shifts || {}).reduce((s,x)=>s+(x.onBreak||0),0));
 
-    const sumPlanned = document.getElementById('sumPlanned');
-    const sumPresent = document.getElementById('sumPresent');
-    const sumAbsent  = document.getElementById('sumAbsent');
-    const sumVacation= document.getElementById('sumVacation');
-    const sumL4      = document.getElementById('sumL4');
-    const sumOther   = document.getElementById('sumOther');
-    const sumFrekw   = document.getElementById('sumFrekw');
-    const split      = document.getElementById('sumPresentSplit');
+    const sumPlanned  = document.getElementById('sumPlanned');
+    const sumPresent  = document.getElementById('sumPresent');
+    const sumAbsent   = document.getElementById('sumAbsent');
+    const sumVacation = document.getElementById('sumVacation');
+    const sumL4       = document.getElementById('sumL4');
+    const sumOther    = document.getElementById('sumOther');
+    const sumFrekw    = document.getElementById('sumFrekw');
+    const split       = document.getElementById('sumPresentSplit');
 
-    const onBreak = Object.values(data.shifts || {}).reduce((s,x)=>s+(x.onBreak||0),0);
-    const work = (o.present || 0) - onBreak;
+    const onBreak = Object.values(data.shifts || {}).reduce((s, x) => s + (Number(x.onBreak) || 0), 0);
+    const present = Number(o.present) || 0;
+    const work = Math.max(0, present - onBreak);
 
-    if (sumPlanned) sumPlanned.textContent = String(o.planned ?? 0);
-    if (sumPresent) sumPresent.textContent = String(o.present ?? 0);
-    if (split) split.innerHTML = `✅&nbsp;Pracuje: ${work} &nbsp; &nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
-    if (sumAbsent) sumAbsent.textContent = String(o.absent ?? 0);
+    if (sumPlanned)  sumPlanned.textContent  = String(o.planned ?? 0);
+    if (sumPresent)  sumPresent.textContent  = String(present);
+    if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${work} &nbsp;|&nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
+    if (sumAbsent)   sumAbsent.textContent   = String(o.absent ?? 0);
     if (sumVacation) sumVacation.textContent = String(o.vacation ?? 0);
-    if (sumL4) sumL4.textContent = String(o.l4 ?? 0);
-    if (sumOther) sumOther.textContent = String(o.otherAbsences ?? 0);
-    if (sumFrekw) sumFrekw.textContent = `${o.frekwencja ?? 0}%`;
+    if (sumL4)       sumL4.textContent       = String(o.l4 ?? 0);
+    if (sumOther)    sumOther.textContent    = String(o.otherAbsences ?? 0);
+    if (sumFrekw)    sumFrekw.textContent    = `${o.frekwencja ?? 0}%`;
 
-    // top działy
-    const topBox = document.getElementById('dashTopBox');
-    const topList = document.getElementById('dashTopList');
-    const top = Array.isArray(data.topDepts) ? data.topDepts : [];
-    if (topBox && topList){
-      if (top.length){
-        topBox.style.display = 'block';
-        topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
-      } else {
-        topBox.style.display = 'none';
-        topList.innerHTML = '';
-      }
-    }
-
-    // shifts
-    const shiftsBox = document.getElementById('dashShifts');
-    if (shiftsBox){
-      const shifts = data.shifts || {};
-      const keys = Object.keys(shifts).sort((a,b)=>a.localeCompare(b));
-      shiftsBox.innerHTML = keys.map(k => renderShiftCard(shifts[k], k)).join('');
-    }
-
-    // workers table
-    const workersBox = document.getElementById('dashWorkers');
-    if (workersBox){
-      workersBox.innerHTML = renderWorkersTable(data.shifts || {});
-    }
+    // render: top działy + zmiany + tabela (z filtrami)
+    renderDashboardFromFullCache(data);
 
     if (st) st.textContent = data.timestamp ? `✅ ${formatPlDateTime(data.timestamp)}` : '✅ OK';
     if (showToast) try { showNotification('Dashboard odświeżony', 'success'); } catch(e) {}
 
-    // historia: ładuj raz przy wejściu / przy odświeżeniu też może
+    // historia nieobecności
     await loadAbsenceHistory(null);
 
   }catch(e){
