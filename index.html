@@ -4176,6 +4176,39 @@ function renderShiftCard(shift, shiftKey) {
 }
 
 function renderWorkersTable(shifts) {
+  function hmToMinutes(hm){
+    const m = String(hm || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    return Number(m[1]) * 60 + Number(m[2]);
+  }
+
+  function pad2(n){ return String(n).padStart(2, '0'); }
+
+  function warsawHM(){
+    // HH:MM w strefie Warsaw bez bibliotek
+    const parts = new Intl.DateTimeFormat('pl-PL', {
+      timeZone: 'Europe/Warsaw',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(new Date());
+
+    const hh = parts.find(p => p.type === 'hour')?.value || '00';
+    const mm = parts.find(p => p.type === 'minute')?.value || '00';
+    return `${hh}:${mm}`;
+  }
+
+  function fmtDuration(mins){
+    mins = Math.max(0, Number(mins) || 0);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h <= 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  }
+
+  const nowHM = warsawHM();
+  const nowMin = hmToMinutes(nowHM) ?? 0;
+
   let html = '<table class="workers-table">';
   html += `
     <thead>
@@ -4192,18 +4225,62 @@ function renderWorkersTable(shifts) {
   `;
 
   Object.keys(shifts || {}).forEach(shiftKey => {
-    const shift = shifts[shiftKey];
-    (shift.planned || []).forEach(worker => {
+    const shift = shifts[shiftKey] || {};
+    const planned = Array.isArray(shift.planned) ? shift.planned : [];
+
+    // shiftKey: "06:00-14:00"
+    const parts = String(shiftKey || '').split('-');
+    const shiftStartHM = (parts[0] || '').trim();
+    const shiftEndHM = (parts[1] || '').trim();
+    const startMin = hmToMinutes(shiftStartHM);
+    const endMin = hmToMinutes(shiftEndHM);
+
+    const started = !!shift.started;
+    const finished = started && endMin !== null ? (nowMin >= endMin) : false;
+
+    planned.forEach(worker => {
       const status = worker.currentStatus || {};
+      const statusKey = String(status.statusKey || '').toLowerCase();
       const statusClass = `status-${status.statusKey || 'absent'}`;
 
       let timeInfo = '---';
-      if (status.workTime) timeInfo = status.workTime;
-      else if (status.breakTime) timeInfo = status.breakTime;
-      else if (status.vacationType) timeInfo = status.vacationType;
+
+      // 1) absencje “opisowe” zostawiamy jak było
+      if (status.vacationType) timeInfo = status.vacationType;
       else if (status.l4Type) timeInfo = `${status.l4Type}${status.l4DateTo ? ' (do ' + status.l4DateTo + ')' : ''}`;
       else if (status.dayOffType) timeInfo = status.dayOffType;
       else if (status.occasionalType) timeInfo = status.occasionalType;
+
+      // 2) zmiana nierozpoczęta -> pusto (tylko tu)
+      else if (!started) {
+        timeInfo = '';
+      }
+
+      // 3) praca/przerwa -> pokazujemy zakres + czas
+      else if (status.workTime || status.breakTime || statusKey === 'working' || statusKey === 'break') {
+        const fromHM = shiftStartHM || '';
+        const toHM = finished ? (shiftEndHM || '') : nowHM;
+
+        let durTxt = '';
+        if (finished && startMin !== null && endMin !== null) {
+          durTxt = fmtDuration(endMin - startMin);
+        } else {
+          // aktywna zmiana: jeśli backend daje workTime/breakTime to użyjemy go,
+          // w przeciwnym razie wyliczymy od startu zmiany do teraz
+          durTxt = status.workTime || status.breakTime || (
+            startMin !== null ? fmtDuration(nowMin - startMin) : ''
+          );
+        }
+
+        // jeśli nie mamy from/to (braki w danych), nie pokazujemy zakresu
+        if (fromHM && toHM) {
+          timeInfo = `${fromHM}–${toHM}${durTxt ? ' • ' + durTxt : ''}`;
+        } else {
+          timeInfo = durTxt || '';
+        }
+      }
+
+      // reszta (nieobecny w aktywnej/ zakończonej zmianie) zostaje '---'
 
       html += `
         <tr>
