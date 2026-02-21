@@ -4249,6 +4249,17 @@ function renderWorkersTable(shifts) {
         timeInfo = '';
       }
 
+          // 2.5) jeśli ktoś miał ENTRY dziś (nawet jak teraz jest NIEOBECNY) -> pokaż realne czasy z logów
+            else if (worker.workSummary && worker.workSummary.hasAnyEntryToday) {
+              const ws = worker.workSummary || null;
+              const fromHM = ws?.firstEntryHM || '';
+              const toHM = ws?.lastExitHM || '…';
+              const durTxt = fmtDuration(Number(ws?.workMinutes || 0));
+            
+              if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
+              else timeInfo = durTxt || '';
+            }
+
       // 3) praca/przerwa -> pokazujemy zakres + czas
       else if (status.workTime || status.breakTime || statusKey === 'working' || statusKey === 'break') {
           const ws = worker.workSummary || null;
@@ -4987,7 +4998,27 @@ if (liveFilter === 'ALERTS')  rows = rows.filter(r => r.alertType === 'LATE' || 
             ${r.status}
           </span>
         </div>
-        <div style="opacity:0.9;">${(r.sinceText || r.startInfo || '')}</div>
+          <div style="opacity:0.9;">
+              ${(() => {
+                const ws = r.workSummary || null;
+                const since = (r.sinceText || r.startInfo || '').trim();
+    
+                let dayLine = '';
+                if (ws && (ws.firstEntryHM || ws.lastExitHM || Number(ws.workMinutes || 0) > 0)) {
+                  const fromHM = ws.firstEntryHM || '';
+                  const toHM = ws.lastExitHM || '…';
+                  const durTxt = fmtDuration(Number(ws.workMinutes || 0));
+    
+                  if (fromHM) dayLine = `${fromHM}–${toHM} • ${durTxt}`;
+                  else if (durTxt) dayLine = durTxt;
+                }
+    
+                return `
+                  ${since}
+                  ${dayLine ? `<div style="font-size:12px; opacity:0.75; margin-top:2px;">${dayLine}</div>` : ''}
+                `;
+              })()}
+            </div>
       </div>
     `;
   });
@@ -5032,7 +5063,19 @@ function liveShowDetails(login){
         
           return `<div><strong>${label}</strong> ${info}</div>`;
         })()}
-        ${r.workInfo ? `<div><strong>Czas pracy dziś:</strong> ${r.workInfo}</div>` : ''}
+        ${(() => {
+          const ws = r.workSummary || null;
+          if (!ws) return '';
+        
+          // pokazuj jeśli cokolwiek ma sens (ENTRY dziś / EXIT dziś / minuty > 0)
+          if (!(ws.firstEntryHM || ws.lastExitHM || Number(ws.workMinutes || 0) > 0)) return '';
+        
+          const fromHM = ws.firstEntryHM || '—';
+          const toHM = ws.lastExitHM || '…';
+          const durTxt = fmtDuration(Number(ws.workMinutes || 0));
+        
+          return `<div><strong>Dziś:</strong> ${fromHM}–${toHM} • ${durTxt}</div>`;
+        })()}
         <div><strong>Czas przerwy dziś:</strong> ${r.breakInfo}</div>
         <div style="opacity:0.85;"><strong>Login:</strong> ${r.login}</div>
       </div>
