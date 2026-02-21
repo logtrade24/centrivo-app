@@ -4251,27 +4251,37 @@ function renderWorkersTable(shifts) {
 
       // 3) praca/przerwa -> pokazujemy zakres + czas
       else if (status.workTime || status.breakTime || statusKey === 'working' || statusKey === 'break') {
-        const fromHM = shiftStartHM || '';
-        const toHM = finished ? (shiftEndHM || '') : nowHM;
-
-        let durTxt = '';
-        if (finished && startMin !== null && endMin !== null) {
-          durTxt = fmtDuration(endMin - startMin);
-        } else {
-          // aktywna zmiana: jeśli backend daje workTime/breakTime to użyjemy go,
-          // w przeciwnym razie wyliczymy od startu zmiany do teraz
-          durTxt = status.workTime || status.breakTime || (
-            startMin !== null ? fmtDuration(nowMin - startMin) : ''
-          );
+          const ws = worker.workSummary || null;
+        
+          // ✅ Preferuj realne czasy z logów (backend)
+          if (ws && (ws.firstEntryHM || ws.lastExitHM || ws.workMinutes !== undefined)) {
+            const fromHM = ws.firstEntryHM || '';
+            const toHM = ws.lastExitHM || '…';
+            const durTxt = fmtDuration(Number(ws.workMinutes || 0));
+        
+            if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
+            else timeInfo = durTxt;
+          } else {
+            // fallback – stara logika (żeby nic się nie wywaliło zanim backend doślesz do /dashboard/full)
+            const fromHM = shiftStartHM || '';
+            const toHM = finished ? (shiftEndHM || '') : nowHM;
+        
+            let durTxt = '';
+            if (finished && startMin !== null && endMin !== null) {
+              durTxt = fmtDuration(endMin - startMin);
+            } else {
+              durTxt = status.workTime || status.breakTime || (
+                startMin !== null ? fmtDuration(nowMin - startMin) : ''
+              );
+            }
+        
+            if (fromHM && toHM) {
+              timeInfo = `${fromHM}–${toHM}${durTxt ? ' • ' + durTxt : ''}`;
+            } else {
+              timeInfo = durTxt || '';
+            }
+          }
         }
-
-        // jeśli nie mamy from/to (braki w danych), nie pokazujemy zakresu
-        if (fromHM && toHM) {
-          timeInfo = `${fromHM}–${toHM}${durTxt ? ' • ' + durTxt : ''}`;
-        } else {
-          timeInfo = durTxt || '';
-        }
-      }
 
       // reszta (nieobecny w aktywnej/ zakończonej zmianie) zostaje '---'
 
@@ -4977,7 +4987,7 @@ if (liveFilter === 'ALERTS')  rows = rows.filter(r => r.alertType === 'LATE' || 
             ${r.status}
           </span>
         </div>
-        <div style="opacity:0.9;">${r.startInfo}</div>
+        <div style="opacity:0.9;">${(r.sinceText || r.startInfo || '')}</div>
       </div>
     `;
   });
@@ -5013,12 +5023,14 @@ function liveShowDetails(login){
         ${lateLine}
         ${absentLine}
         ${(() => {
-          let info = r.startInfo || '';
-
-          // usuń końcówkę "• Praca: ...", jeśli istnieje
-          info = info.replace(/\s*•\s*Praca:\s*\d+h\s*\d+m/, '');
-
-          return `<div><strong>${info.startsWith('Start') ? 'Od kiedy pracuje:' : 'Info:'}</strong> ${info}</div>`;
+          const info = (r.sinceText || r.startInfo || '').trim();
+          const label =
+            info.startsWith('WYJŚCIE') ? 'Wyjście:' :
+            info.startsWith('przerwa') ? 'Przerwa:' :
+            info.startsWith('od ')     ? 'Od kiedy:' :
+            'Info:';
+        
+          return `<div><strong>${label}</strong> ${info}</div>`;
         })()}
         ${r.workInfo ? `<div><strong>Czas pracy dziś:</strong> ${r.workInfo}</div>` : ''}
         <div><strong>Czas przerwy dziś:</strong> ${r.breakInfo}</div>
