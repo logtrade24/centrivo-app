@@ -3951,8 +3951,9 @@ function dashFillShiftOptions(shiftKeys){
 
 function dashSetShiftFilter(val){
   dashShiftFilter = String(val || 'ALL').trim() || 'ALL';
-  // nie robimy nowego fetch’a, tylko przerender z cache:
-  if (dashSnapshotCache) renderDashboardFromFullCache(dashSnapshotCache);
+
+  // ✅ tylko render z cache (bez fetch)
+  if (dashFullCache) dashApplyFiltersAndRender();
 }
 
 function dashFillDeptOptions(depts){
@@ -3982,7 +3983,12 @@ function dashFillDeptOptions(depts){
 
 function dashSetDeptFilter(dept){
   dashDeptFilter = String(dept || 'ALL').trim() || 'ALL';
-  dashRenderFromCache();
+
+  const hint = document.getElementById('dashDeptHint');
+  if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
+
+  // ✅ tylko render z cache (bez fetch)
+  if (dashFullCache) dashApplyFiltersAndRender();
 }
 
 function dashRenderFromCache(){
@@ -4108,7 +4114,7 @@ async function apiAbsenceHistory(days){
   const r = await fetch(`${API_BASE}/dashboard/absence-history`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login, days, dept: dashDeptFilter })
+    body: JSON.stringify({ login, days })
   });
 
   const data = await r.json().catch(() => ({}));
@@ -4309,6 +4315,181 @@ function refreshAbsenceHistory(){
   loadAbsenceHistory(v);
 }
 
+    function dashApplyFiltersAndRender(){
+  if (!dashFullCache) return;
+
+  const src = dashFullCache;
+  const allShifts = src.shifts || {};
+  const allKeys = Object.keys(allShifts).sort((a,b)=>a.localeCompare(b));
+
+  // dropdown zmian (zawsze pełna lista)
+  dashFillShiftOptions(allKeys);
+
+  // 1) filtr po zmianie
+  const keys = (dashShiftFilter === 'ALL')
+    ? allKeys
+    : allKeys.filter(k => k === dashShiftFilter);
+
+  // 2) filtr po dziale: zostaw tylko zmiany gdzie w danym dziale ktoś PRACUJE albo ma PRZERWĘ
+  // (dla ALL: nie filtrujemy po dziale)
+  const filteredShifts = {};
+  for (const k of keys){
+    const sh = allShifts[k];
+    if (!sh) continue;
+
+    if (dashDeptFilter === 'ALL'){
+      filteredShifts[k] = sh;
+      continue;
+    }
+
+    // próbujemy znaleźć pole z listą pracowników w zmianie
+    const planned = Array.isArray(sh.planned) ? sh.planned : (Array.isArray(sh.workers) ? sh.workers : []);
+    if (!planned.length) continue;
+
+    const deptNorm = String(dashDeptFilter).trim().toLowerCase();
+
+    // czy jest choć 1 osoba z tego działu, która pracuje albo jest na przerwie
+    const hasActiveInDept = planned.some(w => {
+      const d = String(w.dept || w.department || w.currentDept || w.baseDept || '').trim().toLowerCase();
+      if (d !== deptNorm) return false;
+
+      const st = String(
+        w.currentStatus?.statusKey ||
+        w.statusKey ||
+        w.status ||
+        ''
+      ).toLowerCase();
+
+      return (st.includes('working') || st.includes('pracuje') || st === 'pracuje' || st.includes('onbreak') || st.includes('przerwa') || st === 'przerwa');
+    });
+
+    if (hasActiveInDept){
+      filteredShifts[k] = sh;
+    }
+  }
+
+  // 3) przelicz kafelki wg przefiltrowanych zmian
+  let plannedAll = 0;              // wszystkie zmiany (po filtrach)
+  let activePlanned = 0;           // tylko aktywne zmiany
+  let presentActive = 0;
+  let onBreakActive = 0;
+
+  let absentActive = 0;
+  let vacationActive = 0;
+  let l4Active = 0;
+  let otherActive = 0;
+
+  // do frekwencji liczymy “plan bez nieobecności uspraw.”
+  let denomActive = 0;
+
+  Object.entries(filteredShifts).forEach(([shiftKey, sh]) => {
+    const planned = Array.isArray(sh.planned) ? sh.planned : (Array.isArray(sh.workers) ? sh.workers : []);
+    plannedAll += planned.length;
+
+    const started = !!sh.started; // u Ciebie tak jest w stylu DBK
+    if (!started) return;
+
+    // liczenie statusów z listy (najpewniejsze)
+    let p = 0, br = 0, ab = 0, vac = 0, l4 = 0, oth = 0, dayoff = 0, occ = 0;
+
+    planned.forEach(w => {
+      // filtrowanie po dziale na poziomie osoby (dla ALL zostaje)
+      if (dashDeptFilter !== 'ALL'){
+        const deptNorm = String(dashDeptFilter).trim().toLowerCase();
+        const d = String(w.dept || w.department || w.currentDept || w.baseDept || '').trim().toLowerCase();
+        if (d !== deptNorm) return;
+      }
+
+      const sk = String(w.currentStatus?.statusKey || w.statusKey || '').toLowerCase();
+      const st = String(w.currentStatus?.statusText || w.status || '').toLowerCase();
+
+      const key = sk || st;
+
+      if (key.includes('working') || key.includes('pracuje')) p++;
+      else if (key.includes('break') || key.includes('przerwa')) { br++; p++; }
+      else if (key.includes('vacation') || key.includes('urlop')) vac++;
+      else if (key.includes('l4')) l4++;
+      else if (key.includes('dayoff') || key.includes('dzień wolny')) dayoff++;
+      else if (key.includes('occasional') || key.includes('okolicz')) occ++;
+      else if (key.includes('absent') || key.includes('nieobec')) ab++;
+      else oth++;
+    });
+
+    const plannedActiveThis = (dashDeptFilter === 'ALL') ? planned.length : (p + ab + vac + l4 + dayoff + occ + oth);
+    activePlanned += plannedActiveThis;
+
+    presentActive += p;
+    onBreakActive += br;
+    absentActive += ab;
+    vacationActive += vac;
+    l4Active += l4;
+    otherActive += (oth + dayoff + occ);
+
+    const withoutAbs = Math.max(0, plannedActiveThis - vac - l4 - dayoff - occ);
+    denomActive += withoutAbs;
+  });
+
+  const workNow = Math.max(0, presentActive - onBreakActive);
+  const frekw = denomActive > 0 ? Math.round((presentActive / denomActive) * 100) : 0;
+
+  // update kafelków
+  const sumPlanned  = document.getElementById('sumPlanned');
+  const sumPresent  = document.getElementById('sumPresent');
+  const sumAbsent   = document.getElementById('sumAbsent');
+  const sumVacation = document.getElementById('sumVacation');
+  const sumL4       = document.getElementById('sumL4');
+  const sumOther    = document.getElementById('sumOther');
+  const sumFrekw    = document.getElementById('sumFrekw');
+  const split       = document.getElementById('sumPresentSplit');
+
+  if (sumPlanned)  sumPlanned.textContent  = String(plannedAll);
+  if (sumPresent)  sumPresent.textContent  = String(presentActive);
+  if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${workNow}<br>🟡&nbsp;Przerwa: ${onBreakActive}`;
+  if (sumAbsent)   sumAbsent.textContent   = String(absentActive);
+  if (sumVacation) sumVacation.textContent = String(vacationActive);
+  if (sumL4)       sumL4.textContent       = String(l4Active);
+  if (sumOther)    sumOther.textContent    = String(otherActive);
+  if (sumFrekw)    sumFrekw.textContent    = `${frekw}%`;
+
+  // 4) TOP działy: licz z workersów “pracuje” po filtrach (dział filtr działa jako ALL albo konkret)
+  const topBox = document.getElementById('dashTopBox');
+  const topList = document.getElementById('dashTopList');
+
+  if (topBox && topList){
+    const m = new Map();
+    Object.values(filteredShifts).forEach(sh => {
+      const planned = Array.isArray(sh.planned) ? sh.planned : (Array.isArray(sh.workers) ? sh.workers : []);
+      planned.forEach(w => {
+        const st = String(w.currentStatus?.statusKey || w.statusKey || w.status || '').toLowerCase();
+        const isWork = (st.includes('working') || st.includes('pracuje'));
+
+        if (!isWork) return;
+
+        const dept = String(w.dept || w.department || w.currentDept || w.baseDept || '-').trim();
+        if (dashDeptFilter !== 'ALL' && dept.toLowerCase() !== String(dashDeptFilter).trim().toLowerCase()) return;
+
+        m.set(dept, (m.get(dept) || 0) + 1);
+      });
+    });
+
+    const top = [...m.entries()]
+      .map(([dept,count]) => ({ dept, count }))
+      .sort((a,b)=>b.count-a.count)
+      .slice(0, 6);
+
+    if (top.length){
+      topBox.style.display = 'block';
+      topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
+    } else {
+      topBox.style.display = 'none';
+      topList.innerHTML = '';
+    }
+  }
+
+  // 5) render sekcji (zmiany-obsada + tabela) na bazie przefiltrowanych zmian
+  renderDashboardFromFullCache({ ...src, shifts: filteredShifts });
+}
+
     function renderDashboardFromFullCache(data){
   const allShifts = data.shifts || {};
   const allKeys = Object.keys(allShifts).sort((a,b)=>a.localeCompare(b));
@@ -4378,7 +4559,7 @@ function refreshAbsenceHistory(){
 
   if (sumPlanned)  sumPlanned.textContent  = String(planned);
   if (sumPresent)  sumPresent.textContent  = String(present);
-  if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${work} &nbsp;|&nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
+  if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${work} &nbsp; &nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
   if (sumAbsent)   sumAbsent.textContent   = String(absent);
   if (sumVacation) sumVacation.textContent = String(vacation);
   if (sumL4)       sumL4.textContent       = String(l4);
@@ -4432,47 +4613,22 @@ async function loadDashboardFull(showToast){
     const data = await apiDashboardFull();
     if (!data?.success) throw new Error(data?.message || 'Błąd danych');
 
-    // cache pod filtry (dział / zmiana)
     dashFullCache = data;
 
-    // uzupełnij listę działów
+    // opcje działów (pełna lista)
     dashFillDeptOptions(data.depts || []);
+
     const hint = document.getElementById('dashDeptHint');
     if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
 
-    // kafelki
-    const o = data.overall || {};
-
-    const sumPlanned  = document.getElementById('sumPlanned');
-    const sumPresent  = document.getElementById('sumPresent');
-    const sumAbsent   = document.getElementById('sumAbsent');
-    const sumVacation = document.getElementById('sumVacation');
-    const sumL4       = document.getElementById('sumL4');
-    const sumOther    = document.getElementById('sumOther');
-    const sumFrekw    = document.getElementById('sumFrekw');
-    const split       = document.getElementById('sumPresentSplit');
-
-    const onBreak = Object.values(data.shifts || {}).reduce((s, x) => s + (Number(x.onBreak) || 0), 0);
-    const present = Number(o.present) || 0;
-    const work = Math.max(0, present - onBreak);
-
-    if (sumPlanned)  sumPlanned.textContent  = String(o.planned ?? 0);
-    if (sumPresent)  sumPresent.textContent  = String(present);
-    if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${work} &nbsp;|&nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
-    if (sumAbsent)   sumAbsent.textContent   = String(o.absent ?? 0);
-    if (sumVacation) sumVacation.textContent = String(o.vacation ?? 0);
-    if (sumL4)       sumL4.textContent       = String(o.l4 ?? 0);
-    if (sumOther)    sumOther.textContent    = String(o.otherAbsences ?? 0);
-    if (sumFrekw)    sumFrekw.textContent    = `${o.frekwencja ?? 0}%`;
-
-    // render: top działy + zmiany + tabela (z filtrami)
-    renderDashboardFromFullCache(data);
+    // ✅ wszystko z cache + filtry
+    dashApplyFiltersAndRender();
 
     if (st) st.textContent = data.timestamp ? `✅ ${formatPlDateTime(data.timestamp)}` : '✅ OK';
     if (showToast) try { showNotification('Dashboard odświeżony', 'success'); } catch(e) {}
 
-      // historia nieobecności
-      await loadAbsenceHistory(null);
+    // ✅ historia tylko przy prawdziwym odświeżeniu (fetch)
+    await loadAbsenceHistory(null);
 
   }catch(e){
     console.error('Dashboard full error:', e);
