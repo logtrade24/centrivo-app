@@ -3951,9 +3951,8 @@ function dashFillShiftOptions(shiftKeys){
 
 function dashSetShiftFilter(val){
   dashShiftFilter = String(val || 'ALL').trim() || 'ALL';
-
-  // ✅ tylko render z cache (bez fetch)
-  if (dashFullCache) dashApplyFiltersAndRender();
+  // nie robimy nowego fetch’a, tylko przerender z cache:
+  if (dashSnapshotCache) renderDashboardFromFullCache(dashSnapshotCache);
 }
 
 function dashFillDeptOptions(depts){
@@ -3983,12 +3982,7 @@ function dashFillDeptOptions(depts){
 
 function dashSetDeptFilter(dept){
   dashDeptFilter = String(dept || 'ALL').trim() || 'ALL';
-
-  const hint = document.getElementById('dashDeptHint');
-  if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
-
-  // ✅ tylko render z cache (bez fetch)
-  if (dashFullCache) dashApplyFiltersAndRender();
+  dashRenderFromCache();
 }
 
 function dashRenderFromCache(){
