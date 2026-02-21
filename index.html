@@ -3951,8 +3951,9 @@ function dashFillShiftOptions(shiftKeys){
 
 function dashSetShiftFilter(val){
   dashShiftFilter = String(val || 'ALL').trim() || 'ALL';
-  // nie robimy nowego fetch’a, tylko przerender z cache:
-  if (dashSnapshotCache) renderDashboardFromFullCache(dashSnapshotCache);
+
+  // natychmiastowy render bez fetcha
+  if (dashFullCache) renderDashboardFromFullCache(dashFullCache);
 }
 
 function dashFillDeptOptions(depts){
@@ -4073,8 +4074,16 @@ function dashFillDeptOptions(depts){
 
 function dashSetDeptFilter(dept){
   dashDeptFilter = String(dept || 'ALL').trim() || 'ALL';
+
+  // reset filtra zmiany przy zmianie działu
+  dashShiftFilter = 'ALL';
+  const shiftSel = document.getElementById('dashShiftFilter');
+  if (shiftSel) shiftSel.value = 'ALL';
+
   const hint = document.getElementById('dashDeptHint');
   if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
+
+  // dział wymaga fetcha (bo backend filtruje dane)
   loadDashboardFull(false);
 }
 
@@ -4302,11 +4311,98 @@ function refreshAbsenceHistory(){
 }
 
     function renderDashboardFromFullCache(data){
-  // TOP działy
+  const allShifts = data.shifts || {};
+  const allKeys = Object.keys(allShifts).sort((a,b)=>a.localeCompare(b));
+
+  // wypełnij opcje zmian
+  dashFillShiftOptions(allKeys);
+
+  // 1) filtr aktywnych zmian przy wybranym dziale:
+  //    pokazuj tylko takie zmiany, gdzie jest choć 1 osoba PRACUJE lub PRZERWA
+  let activeKeys = allKeys;
+  if (dashDeptFilter !== 'ALL'){
+    activeKeys = allKeys.filter(k => {
+      const s = allShifts[k] || {};
+      const planned = Array.isArray(s.planned) ? s.planned : [];
+      return planned.some(w => {
+        const st = w?.currentStatus?.statusKey;
+        return st === 'working' || st === 'break';
+      });
+    });
+  }
+
+  // 2) filtr konkretnej zmiany
+  let keys = activeKeys;
+  if (dashShiftFilter !== 'ALL'){
+    keys = activeKeys.filter(k => k === dashShiftFilter);
+  }
+
+  // jeśli filtr zmiany wskazuje coś co zniknęło po filtrze działu, reset
+  if (dashShiftFilter !== 'ALL' && keys.length === 0){
+    dashShiftFilter = 'ALL';
+    const sel = document.getElementById('dashShiftFilter');
+    if (sel) sel.value = 'ALL';
+    keys = activeKeys;
+  }
+
+  // przygotuj obiekt przefiltrowanych zmian (dla tabeli)
+  const filteredShifts = {};
+  keys.forEach(k => { filteredShifts[k] = allShifts[k]; });
+
+  // ===== KAFELKI (liczymy z tego co widać) =====
+  let planned = 0, present = 0, absent = 0, vacation = 0, l4 = 0, dayOff = 0, occasional = 0, onBreak = 0;
+
+  for (const k of keys){
+    const s = allShifts[k] || {};
+    planned += (Array.isArray(s.planned) ? s.planned.length : 0);
+    present += Number(s.present || 0);
+    absent  += Number(s.absent || 0);
+    vacation += Number(s.vacation || 0);
+    l4 += Number(s.l4 || 0);
+    dayOff += Number(s.dayOff || 0);
+    occasional += Number(s.occasional || 0);
+    onBreak += Number(s.onBreak || 0);
+  }
+
+  const otherAbsences = dayOff + occasional;
+  const work = Math.max(0, present - onBreak);
+  const frekwencja = planned > 0 ? Math.round((present / planned) * 100) : 0;
+
+  const sumPlanned  = document.getElementById('sumPlanned');
+  const sumPresent  = document.getElementById('sumPresent');
+  const sumAbsent   = document.getElementById('sumAbsent');
+  const sumVacation = document.getElementById('sumVacation');
+  const sumL4       = document.getElementById('sumL4');
+  const sumOther    = document.getElementById('sumOther');
+  const sumFrekw    = document.getElementById('sumFrekw');
+  const split       = document.getElementById('sumPresentSplit');
+
+  if (sumPlanned)  sumPlanned.textContent  = String(planned);
+  if (sumPresent)  sumPresent.textContent  = String(present);
+  if (split)       split.innerHTML         = `✅&nbsp;Pracuje: ${work} &nbsp;|&nbsp; 🟡&nbsp;Przerwa: ${onBreak}`;
+  if (sumAbsent)   sumAbsent.textContent   = String(absent);
+  if (sumVacation) sumVacation.textContent = String(vacation);
+  if (sumL4)       sumL4.textContent       = String(l4);
+  if (sumOther)    sumOther.textContent    = String(otherAbsences);
+  if (sumFrekw)    sumFrekw.textContent    = `${frekwencja}%`;
+
+  // ===== TOP DZIAŁY =====
   const topBox = document.getElementById('dashTopBox');
   const topList = document.getElementById('dashTopList');
-  const top = Array.isArray(data.topDepts) ? data.topDepts : [];
+
   if (topBox && topList){
+    let top = Array.isArray(data.topDepts) ? data.topDepts : [];
+
+    // przy filtrze działu pokazujemy 1 wiersz: dział + liczba pracujących z przefiltrowanego widoku
+    if (dashDeptFilter !== 'ALL'){
+      top = [{ dept: dashDeptFilter, count: work }];
+      const title = topBox.querySelector('.dash-top-title');
+      if (title) title.textContent = 'Dział (pracuje)';
+    } else {
+      const title = topBox.querySelector('.dash-top-title');
+      if (title) title.textContent = 'Top działy (pracuje)';
+    }
+
     if (top.length){
       topBox.style.display = 'block';
       topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
@@ -4316,23 +4412,13 @@ function refreshAbsenceHistory(){
     }
   }
 
-  // SHIFTS (z filtrem)
-  const allShifts = data.shifts || {};
-  const allKeys = Object.keys(allShifts).sort((a,b)=>a.localeCompare(b));
-
-  dashFillShiftOptions(allKeys);
-
-  const keys = (dashShiftFilter === 'ALL') ? allKeys : allKeys.filter(k => k === dashShiftFilter);
-
+  // ===== RENDER ZMIANY =====
   const shiftsBox = document.getElementById('dashShifts');
   if (shiftsBox){
     shiftsBox.innerHTML = keys.map(k => renderShiftCard(allShifts[k], k)).join('');
   }
 
-  // workers table (z filtrem)
-  const filteredShifts = {};
-  keys.forEach(k => { filteredShifts[k] = allShifts[k]; });
-
+  // ===== RENDER TABELI PRACOWNIKÓW =====
   const workersBox = document.getElementById('dashWorkers');
   if (workersBox){
     workersBox.innerHTML = renderWorkersTable(filteredShifts);
@@ -4385,9 +4471,6 @@ async function loadDashboardFull(showToast){
 
     if (st) st.textContent = data.timestamp ? `✅ ${formatPlDateTime(data.timestamp)}` : '✅ OK';
     if (showToast) try { showNotification('Dashboard odświeżony', 'success'); } catch(e) {}
-
-    // historia nieobecności
-    await loadAbsenceHistory(null);
 
   }catch(e){
     console.error('Dashboard full error:', e);
