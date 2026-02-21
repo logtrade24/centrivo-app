@@ -2609,6 +2609,155 @@ body.modal-open{
     padding: 40px;
     color: #888;
 }
+
+    /* ===== DASHBOARD (DBK-style) ===== */
+.dbk-summary{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin: 8px 0 14px;
+}
+
+.dbk-card{
+  background:#fff;
+  border-radius:14px;
+  padding:14px 16px;
+  min-width: 160px;
+  flex: 1 1 160px;
+  max-width: 260px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.dbk-title{ font-weight:900; opacity:0.85; font-size:13px; }
+.dbk-val{ font-weight:900; font-size:36px; margin-top:6px; }
+.dbk-sub{ font-weight:800; font-size:13px; opacity:0.9; margin-top:6px; }
+
+.section-title{
+  margin: 18px 0 10px;
+  font-weight:900;
+  font-size: 18px;
+}
+
+.shifts-container{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.shift-card{
+  background:#fff;
+  border-radius:14px;
+  padding:14px 14px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.07);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.shift-card.not-started{
+  opacity:0.55;
+}
+
+.shift-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom: 10px;
+  font-weight: 900;
+}
+
+.shift-time{ font-size:16px; }
+.shift-alert{ font-size:18px; }
+
+.progress-bar{
+  height: 26px;
+  border-radius: 10px;
+  background:#f1f3f5;
+  overflow:hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill{
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  font-size:13px;
+  color:#111;
+}
+
+.progress-fill.warning{ background:#fde68a; }
+.progress-fill.critical{ background:#fecaca; }
+.progress-fill.ok{ background:#bbf7d0; }
+
+.shift-stats{
+  font-weight:800;
+  font-size: 13px;
+  line-height: 1.45;
+  opacity:0.95;
+}
+
+.workers-table{
+  width:100%;
+  border-collapse: collapse;
+  background:#fff;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.07);
+}
+
+.workers-table th, .workers-table td{
+  padding: 10px 10px;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 13px;
+  text-align:left;
+}
+
+.workers-table th{
+  font-weight:900;
+  opacity:0.85;
+  background:#f8fafc;
+}
+
+.status-badge{
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  display:inline-block;
+}
+
+.status-working{ background:#dcfce7; }
+.status-break{ background:#fef9c3; }
+.status-absent{ background:#fee2e2; }
+.status-vacation{ background:#e1f5fe; }
+.status-l4{ background:#f3e5f5; }
+.status-dayoff{ background:#e8f5e9; }
+.status-occasional{ background:#f3e5f5; }
+
+.loading{ font-weight:900; opacity:0.8; padding: 10px 0; }
+
+/* filtr i dark mode */
+.dash-filter-row{
+  display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  margin: 10px 0 10px 0;
+}
+.dash-filter-label{ font-weight:900; opacity:0.9; }
+.dash-filter-hint{ opacity:0.85; font-size:13px; }
+.dash-filter-select{ width:260px; max-width:100%; }
+
+body.dark-mode .dash-filter-label{ color:#e2e8f0; }
+body.dark-mode .dash-filter-hint{ color:#aab4c8; }
+body.dark-mode .dbk-card,
+body.dark-mode .shift-card,
+body.dark-mode .workers-table{
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  color:#e2e8f0;
+}
+body.dark-mode .workers-table th{ background: rgba(255,255,255,0.06); }
+body.dark-mode .progress-bar{ background: rgba(255,255,255,0.10); }
+    
 </style>
 
 <div id="loginScreen" style="display: none;">
@@ -2785,55 +2934,70 @@ body.modal-open{
             </div> <!-- zamknięcie: #departmentView -->
             <!-- WIDOK DASHBOARD (KIEROWNIK) -->
             <div class="view" id="dashboardView">
-            
-              <button class="back-button" onclick="closeDashboard()">← Powrót</button>
-            
-              <h2 class="view-title">Dashboard</h2>
 
-                <div class="dash-filter-row">
-                  <div class="dash-filter-label">Filtr działu:</div>
-                
-                  <select id="dashDeptFilter" class="code-input dash-filter-select" onchange="dashSetDeptFilter(this.value)">
-                    <option value="ALL">Wszystkie działy</option>
-                  </select>
-                
-                  <div id="dashDeptHint" class="dash-filter-hint">Widok: cała firma</div>
-                </div>
-            
-              <div class="dash-grid">
-                  <div class="dash-card">
-                    <div class="dash-label">Obecni</div>
-                    <div class="dash-value" id="dashPresent">—</div>
-                
-                    <div id="dashPresentSplit" style="margin-top:6px; font-size:13px; font-weight:800; opacity:0.9;">
-                      ✅ Pracuje: — &nbsp;|&nbsp; 🟡 Przerwa: —
-                    </div>
-                  </div>
-                
-                  <div class="dash-card">
-                    <div class="dash-label">Nieobecni</div>
-                    <div class="dash-value" id="dashAbsent">—</div>
-                  </div>
-                </div>
-            
-              <div class="dash-actions">
-                <button class="dashboard-btn" onclick="loadDashboardSnapshot(true)" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
-                  🔄 Odśwież
-                </button>
-            
-                <button class="dashboard-btn" onclick="openWorkforceLiveModal()" style="background: linear-gradient(135deg, #6633FF 0%, #3b82f6 100%);">
-                  👁️ LIVE
-                </button>
-            
-                <div id="dashStatus" class="dash-status"></div>
-              </div>
-            
-              <div class="dash-top" id="dashTopBox" style="display:none;">
-                <div class="dash-top-title">Top działy (pracuje)</div>
-                <div id="dashTopList"></div>
-              </div>
-            
-            </div>
+  <button class="back-button" onclick="closeDashboard()">← Powrót</button>
+  <h2 class="view-title">Dashboard</h2>
+
+  <div class="dash-filter-row">
+    <div class="dash-filter-label">Filtr działu:</div>
+
+    <select id="dashDeptFilter" class="code-input dash-filter-select" onchange="dashSetDeptFilter(this.value)">
+      <option value="ALL">Wszystkie działy</option>
+    </select>
+
+    <div id="dashDeptHint" class="dash-filter-hint">Widok: cała firma</div>
+  </div>
+
+  <!-- GÓRNE KAFELKI (jak DBK) -->
+  <div class="dbk-summary" id="dbkSummary">
+    <div class="dbk-card"><div class="dbk-title">👥 ZAPLANOWANO</div><div class="dbk-val" id="sumPlanned">—</div></div>
+
+    <div class="dbk-card">
+      <div class="dbk-title">✅ OBECNI</div>
+      <div class="dbk-val" id="sumPresent">—</div>
+      <div class="dbk-sub" id="sumPresentSplit">✅ Pracuje: — | 🟡 Przerwa: —</div>
+    </div>
+
+    <div class="dbk-card"><div class="dbk-title">❌ NIEOBECNI</div><div class="dbk-val" id="sumAbsent">—</div></div>
+    <div class="dbk-card"><div class="dbk-title">🏖️ URLOP</div><div class="dbk-val" id="sumVacation">—</div></div>
+    <div class="dbk-card"><div class="dbk-title">🏥 L4</div><div class="dbk-val" id="sumL4">—</div></div>
+    <div class="dbk-card"><div class="dbk-title">📋 INNE NIEOB.</div><div class="dbk-val" id="sumOther">—</div></div>
+    <div class="dbk-card"><div class="dbk-title">📈 FREKWENCJA</div><div class="dbk-val" id="sumFrekw">—</div></div>
+  </div>
+
+  <div class="dash-actions">
+    <button class="dashboard-btn" onclick="loadDashboardFull(true)" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+      🔄 Odśwież
+    </button>
+
+    <button class="dashboard-btn" onclick="openWorkforceLiveModal()" style="background: linear-gradient(135deg, #6633FF 0%, #3b82f6 100%);">
+      👁️ LIVE
+    </button>
+
+    <div id="dashStatus" class="dash-status"></div>
+  </div>
+
+  <!-- TOP DZIAŁY -->
+  <div class="dash-top" id="dashTopBox" style="display:none;">
+    <div class="dash-top-title">Top działy (pracuje)</div>
+    <div id="dashTopList"></div>
+  </div>
+
+  <!-- ZMIANY -->
+  <h2 class="section-title">🕐 ZMIANY - OBSADA</h2>
+  <div class="shifts-container" id="dashShifts"></div>
+
+  <!-- TABELA PRACOWNIKÓW -->
+  <h2 class="section-title">📋 SZCZEGÓŁY PRACOWNIKÓW</h2>
+  <div id="dashWorkers"></div>
+
+  <!-- HISTORIA -->
+  <h2 class="section-title">📅 HISTORIA NIEOBECNOŚCI</h2>
+  <div id="absence-history-container">
+    <div class="loading">⏳ Ładowanie historii...</div>
+  </div>
+
+</div>
 
             <!-- WIDOK WYBORU PRACOWNIKA -->
             <div class="view" id="userView">
@@ -3865,6 +4029,333 @@ function dashRenderFromCache(){
   }
 }
 
+    let dashFullCache = null;
+let dashDeptFilter = 'ALL';
+
+function dashFillDeptOptions(depts){
+  const sel = document.getElementById('dashDeptFilter');
+  if (!sel) return;
+
+  const current = sel.value || 'ALL';
+  const list = Array.isArray(depts) ? depts : [];
+
+  sel.innerHTML =
+    `<option value="ALL">Wszystkie działy</option>` +
+    list.map(d => `<option value="${String(d).replace(/"/g,'&quot;')}">${d}</option>`).join('');
+
+  sel.value = list.includes(current) ? current : 'ALL';
+}
+
+function dashSetDeptFilter(dept){
+  dashDeptFilter = String(dept || 'ALL').trim() || 'ALL';
+  const hint = document.getElementById('dashDeptHint');
+  if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
+  loadDashboardFull(false);
+}
+
+async function apiDashboardFull(){
+  const login = String(sessionStorage.getItem('loggedInUser') || '').trim().toLowerCase();
+  if (!login) throw new Error('Brak loginu w sesji.');
+
+  const r = await fetch(`${API_BASE}/dashboard/full`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, dept: dashDeptFilter })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiAbsenceHistory(days){
+  const login = String(sessionStorage.getItem('loggedInUser') || '').trim().toLowerCase();
+  if (!login) throw new Error('Brak loginu w sesji.');
+
+  const r = await fetch(`${API_BASE}/dashboard/absence-history`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, days, dept: dashDeptFilter })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+function renderShiftCard(shift, shiftKey) {
+  if (!shift.started) {
+    return `
+      <div class="shift-card not-started">
+        <div class="shift-header">
+          <div class="shift-time">⏰ ${shiftKey}</div>
+          <div class="shift-alert">⚪</div>
+        </div>
+        <div class="shift-stats">
+          ⏳ Zmiana jeszcze nie rozpoczęta<br>
+          Zaplanowano: ${shift.planned.length} osób
+        </div>
+      </div>
+    `;
+  }
+
+  const totalWithoutAbsences = shift.planned.length - (shift.vacation||0) - (shift.l4||0) - (shift.dayOff||0) - (shift.occasional||0);
+  const coverage = Number(shift.coverage || 0);
+
+  const progressClass =
+    coverage >= 80 ? 'ok' :
+    coverage >= 50 ? 'warning' : 'critical';
+
+  const present = Number(shift.present || 0);
+  const onBreak = Number(shift.onBreak || 0);
+
+  return `
+    <div class="shift-card">
+      <div class="shift-header">
+        <div class="shift-time">⏰ ${shiftKey}</div>
+        <div class="shift-alert">${shift.alert || ''}</div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill ${progressClass}" style="width:${coverage}%">
+          ${present}/${Math.max(0,totalWithoutAbsences)} (${coverage}%)
+        </div>
+      </div>
+
+      <div class="shift-stats">
+        ✅ Pracuje: ${Math.max(0, present - onBreak)} &nbsp;
+        🟡 Przerwa: ${onBreak} &nbsp;
+        ❌ Nieobecni: ${shift.absent || 0}<br>
+        🏖️ Urlop: ${shift.vacation || 0} &nbsp;
+        🏥 L4: ${shift.l4 || 0} &nbsp;
+        📅 Dzień wolny: ${shift.dayOff || 0} &nbsp;
+        🎊 Okoliczn.: ${shift.occasional || 0} &nbsp;
+        ⚪ Wyszło: ${shift.left || 0}
+      </div>
+    </div>
+  `;
+}
+
+function renderWorkersTable(shifts) {
+  let html = '<table class="workers-table">';
+  html += `
+    <thead>
+      <tr>
+        <th>Zmiana</th>
+        <th>Login</th>
+        <th>Imię</th>
+        <th>Dział</th>
+        <th>Status</th>
+        <th>Czas / Szczegóły</th>
+      </tr>
+    </thead>
+    <tbody>
+  `;
+
+  Object.keys(shifts || {}).forEach(shiftKey => {
+    const shift = shifts[shiftKey];
+    (shift.planned || []).forEach(worker => {
+      const status = worker.currentStatus || {};
+      const statusClass = `status-${status.statusKey || 'absent'}`;
+
+      let timeInfo = '---';
+      if (status.workTime) timeInfo = status.workTime;
+      else if (status.breakTime) timeInfo = status.breakTime;
+      else if (status.vacationType) timeInfo = status.vacationType;
+      else if (status.l4Type) timeInfo = `${status.l4Type}${status.l4DateTo ? ' (do ' + status.l4DateTo + ')' : ''}`;
+      else if (status.dayOffType) timeInfo = status.dayOffType;
+      else if (status.occasionalType) timeInfo = status.occasionalType;
+
+      html += `
+        <tr>
+          <td>${shiftKey}</td>
+          <td>${status.icon || ''} ${worker.login}</td>
+          <td>${worker.name || ''}</td>
+          <td>${status.currentDepartment || worker.dept || '---'}</td>
+          <td><span class="status-badge ${statusClass}">${status.statusText || 'NIEOBECNY'}</span></td>
+          <td>${timeInfo}</td>
+        </tr>
+      `;
+    });
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
+
+function formatDatePLShort(iso){
+  const p = String(iso || '').split('-');
+  if (p.length !== 3) return iso;
+  return `${p[2]}.${p[1]}.${p[0]}`;
+}
+
+async function loadAbsenceHistory(days = null){
+  const box = document.getElementById('absence-history-container');
+  if (!box) return;
+  box.innerHTML = `<div class="loading">⏳ Ładowanie historii...</div>`;
+
+  try{
+    const data = await apiAbsenceHistory(days);
+    if (!data?.success) throw new Error(data?.message || 'Błąd danych');
+
+    let html = `
+      <div class="absence-filters" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin: 10px 0;">
+        <select id="absencePeriodFilter" class="code-input" style="width:260px; max-width:100%;">
+          <option value="7" ${days === 7 ? 'selected' : ''}>Ostatnie 7 dni</option>
+          <option value="14" ${days === 14 ? 'selected' : ''}>Ostatnie 14 dni</option>
+          <option value="30" ${days === 30 ? 'selected' : ''}>Ostatnie 30 dni</option>
+          <option value="60" ${days === 60 ? 'selected' : ''}>Ostatnie 60 dni</option>
+          <option value="90" ${days === 90 ? 'selected' : ''}>Ostatnie 90 dni</option>
+          <option value="null" ${days === null ? 'selected' : ''}>Wszystkie</option>
+        </select>
+
+        <button class="dashboard-btn" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);" onclick="refreshAbsenceHistory()">
+          🔄 Odśwież historię
+        </button>
+      </div>
+    `;
+
+    html += '<table class="workers-table">';
+    html += `
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Dni</th>
+          <th>Pracownik</th>
+          <th>Typ</th>
+          <th>Szczegóły</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+    `;
+
+    (data.absences || []).forEach(a => {
+      const dateRange = (a.dateFrom === a.dateTo)
+        ? formatDatePLShort(a.dateFrom)
+        : `${formatDatePLShort(a.dateFrom)}-${formatDatePLShort(a.dateTo)}`;
+
+      html += `
+        <tr>
+          <td>${dateRange}</td>
+          <td>${a.days > 0 ? a.days : '-'}</td>
+          <td>${a.name || a.login || ''}</td>
+          <td>${a.typeText || ''}</td>
+          <td>${a.details || ''}</td>
+          <td>${a.status || '-'}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table>';
+
+    const s = data.stats || {};
+    html += `
+      <div class="shift-card" style="margin-top:14px;">
+        <div style="font-weight:900; margin-bottom:8px;">📊 PODSUMOWANIE</div>
+        <div style="font-weight:800; font-size:13px; line-height:1.6;">
+          • Dni urlopowe: <b>${s.totalVacationDays || 0}</b> &nbsp;&nbsp;
+          • Dni L4: <b>${s.totalL4Days || 0}</b> &nbsp;&nbsp;
+          • Dni wolne: <b>${s.totalDayOffDays || 0}</b> &nbsp;&nbsp;
+          • Urlopy okolicznościowe: <b>${s.totalOccasionalDays || 0}</b> &nbsp;&nbsp;
+          • Dni nieusprawiedliwione: <b>${s.totalUnjustifiedDays || 0}</b>
+        </div>
+      </div>
+    `;
+
+    box.innerHTML = html;
+  }catch(e){
+    box.innerHTML = `<div class="error">⚠️ Błąd ładowania historii: ${e.message || e}</div>`;
+  }
+}
+
+function refreshAbsenceHistory(){
+  const sel = document.getElementById('absencePeriodFilter');
+  if (!sel) return;
+  const v = sel.value === 'null' ? null : Number(sel.value);
+  loadAbsenceHistory(v);
+}
+
+async function loadDashboardFull(showToast){
+  const st = document.getElementById('dashStatus');
+  if (st) st.textContent = '⏳ Ładuję...';
+
+  try{
+    const data = await apiDashboardFull();
+    if (!data?.success) throw new Error(data?.message || 'Błąd danych');
+
+    dashFullCache = data;
+
+    dashFillDeptOptions(data.depts || []);
+    const hint = document.getElementById('dashDeptHint');
+    if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
+
+    // kafelki
+    const o = data.overall || {};
+    const working = (o.present || 0) - (Object.values(data.shifts || {}).reduce((s,x)=>s+(x.onBreak||0),0));
+
+    const sumPlanned = document.getElementById('sumPlanned');
+    const sumPresent = document.getElementById('sumPresent');
+    const sumAbsent  = document.getElementById('sumAbsent');
+    const sumVacation= document.getElementById('sumVacation');
+    const sumL4      = document.getElementById('sumL4');
+    const sumOther   = document.getElementById('sumOther');
+    const sumFrekw   = document.getElementById('sumFrekw');
+    const split      = document.getElementById('sumPresentSplit');
+
+    const onBreak = Object.values(data.shifts || {}).reduce((s,x)=>s+(x.onBreak||0),0);
+    const work = (o.present || 0) - onBreak;
+
+    if (sumPlanned) sumPlanned.textContent = String(o.planned ?? 0);
+    if (sumPresent) sumPresent.textContent = String(o.present ?? 0);
+    if (split) split.innerHTML = `✅ Pracuje: ${work} &nbsp;|&nbsp; 🟡 Przerwa: ${onBreak}`;
+    if (sumAbsent) sumAbsent.textContent = String(o.absent ?? 0);
+    if (sumVacation) sumVacation.textContent = String(o.vacation ?? 0);
+    if (sumL4) sumL4.textContent = String(o.l4 ?? 0);
+    if (sumOther) sumOther.textContent = String(o.otherAbsences ?? 0);
+    if (sumFrekw) sumFrekw.textContent = `${o.frekwencja ?? 0}%`;
+
+    // top działy
+    const topBox = document.getElementById('dashTopBox');
+    const topList = document.getElementById('dashTopList');
+    const top = Array.isArray(data.topDepts) ? data.topDepts : [];
+    if (topBox && topList){
+      if (top.length){
+        topBox.style.display = 'block';
+        topList.innerHTML = top.map(x => `<div class="dash-top-row"><div>${x.dept}</div><div>${x.count}</div></div>`).join('');
+      } else {
+        topBox.style.display = 'none';
+        topList.innerHTML = '';
+      }
+    }
+
+    // shifts
+    const shiftsBox = document.getElementById('dashShifts');
+    if (shiftsBox){
+      const shifts = data.shifts || {};
+      const keys = Object.keys(shifts).sort((a,b)=>a.localeCompare(b));
+      shiftsBox.innerHTML = keys.map(k => renderShiftCard(shifts[k], k)).join('');
+    }
+
+    // workers table
+    const workersBox = document.getElementById('dashWorkers');
+    if (workersBox){
+      workersBox.innerHTML = renderWorkersTable(data.shifts || {});
+    }
+
+    if (st) st.textContent = data.timestamp ? `✅ ${formatPlDateTime(data.timestamp)}` : '✅ OK';
+    if (showToast) try { showNotification('Dashboard odświeżony', 'success'); } catch(e) {}
+
+    // historia: ładuj raz przy wejściu / przy odświeżeniu też może
+    await loadAbsenceHistory(null);
+
+  }catch(e){
+    console.error('Dashboard full error:', e);
+    if (st) st.textContent = `❌ ${e.message || e}`;
+    if (showToast) try { showNotification('Błąd pobrania dashboardu', 'error'); } catch(e2) {}
+  }
+}
+
     async function apiDashboardSnapshot(){
   const login = String(sessionStorage.getItem('loggedInUser') || '').trim().toLowerCase();
   if (!login) throw new Error('Brak loginu w sesji.');
@@ -4025,7 +4516,7 @@ async function apiCreateAnnouncement(login, typ, tresc, dataWaznosci, odbiorcy, 
  */
 function openDashboard() {
   showView('dashboard');
-  loadDashboardSnapshot(true);
+  loadDashboardFull(true);
 }
 
 function closeDashboard(){
