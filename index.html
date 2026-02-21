@@ -337,6 +337,29 @@ Wersja: 2.0
           font-weight: 700;
         }
 
+        .dash-filter-row{
+          display:flex;
+          gap:10px;
+          align-items:center;
+          flex-wrap:wrap;
+          margin: 10px 0 14px 0;
+        }
+        
+        .dash-filter-label{
+          font-weight:900;
+          opacity:0.9;
+        }
+        
+        .dash-filter-hint{
+          opacity:0.85;
+          font-size:13px;
+        }
+        
+        .dash-filter-select{
+          width:260px;
+          max-width:100%;
+        }
+
         .view-title {
             text-align: center;
             margin-bottom: 30px;
@@ -349,59 +372,59 @@ Wersja: 2.0
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
     padding: 20px 0;
-}
-
-.tile {
-    background: white;
-    padding: 32px 24px;
-    border-radius: 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    color: white;
-    font-weight: 600;
-    font-size: 17px;
-    min-height: 130px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    position: relative;
-    overflow: hidden;
-}
-
-.tile::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%);
-    pointer-events: none;
-}
-
-.tile:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-}
-
-.tile:active {
-    transform: translateY(-4px) scale(1.01);
-}
-
-.tile-icon {
-    font-size: 36px;
-    line-height: 1;
-}
-
-.tile-text {
-    font-size: 16px;
-    line-height: 1.3;
-}
+        }
+        
+        .tile {
+            background: white;
+            padding: 32px 24px;
+            border-radius: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            color: white;
+            font-weight: 600;
+            font-size: 17px;
+            min-height: 130px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%);
+            pointer-events: none;
+        }
+        
+        .tile:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+        
+        .tile:active {
+            transform: translateY(-4px) scale(1.01);
+        }
+        
+        .tile-icon {
+            font-size: 36px;
+            line-height: 1;
+        }
+        
+        .tile-text {
+            font-size: 16px;
+            line-height: 1.3;
+        }
 
         .tile.disabled {
             opacity: 0.4;
@@ -915,6 +938,14 @@ body.dark-mode .stat-item {
 
 body.dark-mode .stat-value.working { color: #34d399; }
 body.dark-mode .stat-value.break { color: #fbbf24; }
+
+body.dark-mode .dash-filter-label{
+  color:#e2e8f0;
+}
+
+body.dark-mode .dash-filter-hint{
+  color:#aab4c8;
+}
 
 body.dark-mode .modal-overlay {
     background: rgba(0, 0, 0, 0.8);
@@ -2759,6 +2790,16 @@ body.modal-open{
             
               <h2 class="view-title">Dashboard</h2>
 
+                <div class="dash-filter-row">
+                  <div class="dash-filter-label">Filtr działu:</div>
+                
+                  <select id="dashDeptFilter" class="code-input dash-filter-select" onchange="dashSetDeptFilter(this.value)">
+                    <option value="ALL">Wszystkie działy</option>
+                  </select>
+                
+                  <div id="dashDeptHint" class="dash-filter-hint">Widok: cała firma</div>
+                </div>
+
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 10px 0 14px 0;">
                   <div style="font-weight:900; opacity:0.9;">Filtr działu:</div>
                   <select id="dashDeptFilter" class="code-input" style="width:260px; max-width: 100%;" onchange="dashSetDeptFilter(this.value)">
@@ -2769,28 +2810,19 @@ body.modal-open{
             
               <div class="dash-grid">
                   <div class="dash-card">
-                      <div class="dash-label">Obecni</div>
-                      <div class="dash-value" id="dashPresent">—</div>
-                      <div id="dashPresentSplit" style="margin-top:6px; font-size:13px; font-weight:800; opacity:0.9;">
-                        ✅ Pracuje: — &nbsp;|&nbsp; 🟡 Przerwa: —
-                      </div>
+                    <div class="dash-label">Obecni</div>
+                    <div class="dash-value" id="dashPresent">—</div>
+                
+                    <div id="dashPresentSplit" style="margin-top:6px; font-size:13px; font-weight:800; opacity:0.9;">
+                      ✅ Pracuje: — &nbsp;|&nbsp; 🟡 Przerwa: —
                     </div>
-                  
-                <div class="dash-card">
-                  <div class="dash-label">Pracuje</div>
-                  <div class="dash-value" id="dashWorking">—</div>
+                  </div>
+                
+                  <div class="dash-card">
+                    <div class="dash-label">Nieobecni</div>
+                    <div class="dash-value" id="dashAbsent">—</div>
+                  </div>
                 </div>
-            
-                <div class="dash-card">
-                  <div class="dash-label">Na przerwie</div>
-                  <div class="dash-value" id="dashBreak">—</div>
-                </div>
-            
-                <div class="dash-card">
-                  <div class="dash-label">Nieobecni</div>
-                  <div class="dash-value" id="dashAbsent">—</div>
-                </div>
-              </div>
             
               <div class="dash-actions">
                 <button class="dashboard-btn" onclick="loadDashboardSnapshot(true)" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
@@ -3829,6 +3861,84 @@ function dashRenderFromCache(){
       if (title){
         title.textContent = (dashDeptFilter === 'ALL') ? 'Top działy (pracuje)' : 'Dział (pracuje)';
       }
+      topList.innerHTML = top.map(x => {
+        const dept = String(x.dept || '-');
+        const cnt  = String(x.count || 0);
+        return `<div class="dash-top-row"><div>${dept}</div><div>${cnt}</div></div>`;
+      }).join('');
+    } else {
+      topBox.style.display = 'none';
+      topList.innerHTML = '';
+    }
+  }
+}
+
+    let dashSnapshotCache = null;
+let dashDeptFilter = 'ALL';
+
+function dashFillDeptOptions(depts){
+  const sel = document.getElementById('dashDeptFilter');
+  if (!sel) return;
+
+  const current = sel.value || 'ALL';
+  const list = Array.isArray(depts) ? depts : [];
+
+  sel.innerHTML =
+    `<option value="ALL">Wszystkie działy</option>` +
+    list.map(d => `<option value="${String(d).replace(/"/g,'&quot;')}">${d}</option>`).join('');
+
+  sel.value = list.includes(current) ? current : 'ALL';
+}
+
+function dashSetDeptFilter(dept){
+  dashDeptFilter = String(dept || 'ALL').trim() || 'ALL';
+  dashRenderFromCache();
+}
+
+function dashRenderFromCache(){
+  const data = dashSnapshotCache;
+  if (!data) return;
+
+  const hint = document.getElementById('dashDeptHint');
+  if (hint){
+    hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
+  }
+
+  let working = Number(data.working ?? 0);
+  let onBreak = Number(data.onBreak ?? 0);
+  let absent  = Number(data.absent ?? 0);
+  let present = Number(data.present ?? (working + onBreak));
+
+  if (dashDeptFilter !== 'ALL'){
+    const per = Array.isArray(data.perDepts) ? data.perDepts : [];
+    const row = per.find(x => String(x.dept || '').trim() === dashDeptFilter);
+
+    working = Number(row?.working ?? 0);
+    onBreak = Number(row?.onBreak ?? 0);
+    absent  = Number(row?.absent ?? 0);
+    present = Number(row?.present ?? (working + onBreak));
+  }
+
+  const elPresent = document.getElementById('dashPresent');
+  const elSplit   = document.getElementById('dashPresentSplit');
+  const elAbsent  = document.getElementById('dashAbsent');
+
+  if (elPresent) elPresent.textContent = String(present);
+  if (elSplit)   elSplit.innerHTML = `✅ Pracuje: ${working} &nbsp;|&nbsp; 🟡 Przerwa: ${onBreak}`;
+  if (elAbsent)  elAbsent.textContent = String(absent);
+
+  // Top działy (pracuje)
+  const topBox = document.getElementById('dashTopBox');
+  const topList = document.getElementById('dashTopList');
+
+  let top = Array.isArray(data.topDepts) ? data.topDepts : [];
+  if (dashDeptFilter !== 'ALL'){
+    top = [{ dept: dashDeptFilter, count: working }];
+  }
+
+  if (topBox && topList){
+    if (top.length){
+      topBox.style.display = 'block';
       topList.innerHTML = top.map(x => {
         const dept = String(x.dept || '-');
         const cnt  = String(x.count || 0);
