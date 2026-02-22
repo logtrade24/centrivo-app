@@ -4161,6 +4161,40 @@ function renderDashboardReportTable(rows){
   const list = Array.isArray(rows) ? rows : [];
   window._dashReportRows = list; // ✅ cache do rozwijania
 
+      let sumPlanned = 0;
+  let sumAbsentNL = 0;
+  let sumVacation = 0;
+  let sumL4 = 0;
+  let sumOther = 0;
+  let sumFrekw = 0;
+  let daysCount = 0;
+
+  for (const r of list){
+    const planned = Number(r.planned || 0);
+    const absentNL = Number(r.absentNoLogin || 0);
+    const vacation = Number(r.vacation || 0);
+    const l4 = Number(r.l4 || 0);
+    const other = Number(r.other || 0);
+    const frekw = Number(r.frekw || 0);
+
+    sumPlanned += planned;
+    sumAbsentNL += absentNL;
+    sumVacation += vacation;
+    sumL4 += l4;
+    sumOther += other;
+
+    sumFrekw += frekw;
+    daysCount += 1;
+  }
+
+  const avgPlanned = daysCount ? Math.round(sumPlanned / daysCount) : 0;
+  const avgFrekw = daysCount ? Math.round(sumFrekw / daysCount) : 0;
+
+  const avgFrekwColor =
+    avgFrekw >= 95 ? '#22c55e' :
+    avgFrekw >= 85 ? '#f59e0b' :
+    '#ef4444';
+
   let html = `
     <table class="workers-table">
       <thead>
@@ -4212,7 +4246,21 @@ function renderDashboardReportTable(rows){
     `;
   });
 
-  html += `</tbody></table>`;
+    html += `
+      </tbody>
+      <tfoot>
+        <tr style="background: rgba(255,255,255,0.06);">
+          <td style="font-weight:900;">SUMA / ŚREDNIA</td>
+          <td title="Suma zaplanowanych / średnia dzienna">${sumPlanned} <span style="opacity:0.75; font-weight:700;">/ ${avgPlanned}</span></td>
+          <td>${sumAbsentNL}</td>
+          <td>${sumVacation}</td>
+          <td>${sumL4}</td>
+          <td>${sumOther}</td>
+          <td style="font-weight:900; color:${avgFrekwColor};" title="Średnia frekwencja z okresu">${avgFrekw}%</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
   return html;
 }
 
