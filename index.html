@@ -4179,16 +4179,27 @@ function renderDashboardReportTable(rows){
 
     list.forEach((r, i) => {
     const date = formatDatePLShort(r.date);
+    const frekw = Number(r.frekw || 0);
+    const absentNL = Number(r.absentNoLogin || 0);
+
+    const frekwColor =
+      frekw >= 95 ? '#22c55e' :
+      frekw >= 85 ? '#f59e0b' :
+      '#ef4444';    
 
     html += `
       <tr class="dash-report-row" data-i="${i}" onclick="toggleDashReportRow(${i})" style="cursor:pointer;">
-        <td style="font-weight:900;">${date} <span style="opacity:0.7; font-weight:700; font-size:12px;">(klik)</span></td>
+      <td style="font-weight:900;">
+          ${date}
+          ${absentNL > 0 ? `<span style="margin-left:8px; font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid rgba(239,68,68,0.45); background: rgba(239,68,68,0.14); color:#fecaca; font-weight:900;">⚠ ${absentNL}</span>` : ''}
+          <span style="opacity:0.7; font-weight:700; font-size:12px; margin-left:8px;">(klik)</span>
+        </td>
         <td>${Number(r.planned||0)}</td>
         <td>${Number(r.absentNoLogin||0)}</td>
         <td>${Number(r.vacation||0)}</td>
         <td>${Number(r.l4||0)}</td>
         <td>${Number(r.other||0)}</td>
-        <td>${Number(r.frekw||0)}%</td>
+        <td style="font-weight:900; color:${frekwColor};">${frekw}%</td>
       </tr>
 
       <tr id="dashReportDetailsRow_${i}" style="display:none;">
