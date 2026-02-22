@@ -4195,6 +4195,56 @@ function renderDashboardReportTable(rows){
   return html;
 }
 
+function toggleDashReportRow(i){
+  const row = document.getElementById(`dashReportDetailsRow_${i}`);
+  if (!row) return;
+
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+}
+
+function renderDashReportDetails(r){
+  // Jeśli backend zwraca listy osób, pokażemy je.
+  // Jak nie zwraca – pokażemy sensowny placeholder (żeby UI działało już teraz).
+  const d = r?.details || null;
+
+  const block = (title, arr) => {
+    const list = Array.isArray(arr) ? arr : [];
+    if (!list.length) return `
+      <div style="opacity:0.85;"><strong>${title}:</strong> <span style="opacity:0.75;">brak</span></div>
+    `;
+
+    const items = list.map(x => {
+      if (!x) return '';
+      if (typeof x === 'string') return `<span style="padding:2px 8px; border:1px solid rgba(255,255,255,0.14); border-radius:999px; display:inline-block; margin:3px 6px 0 0;">${escapeHtml(x)}</span>`;
+      const name = x.name || x.login || '';
+      return `<span style="padding:2px 8px; border:1px solid rgba(255,255,255,0.14); border-radius:999px; display:inline-block; margin:3px 6px 0 0;">${escapeHtml(name)}</span>`;
+    }).join('');
+
+    return `
+      <div style="margin-top:6px;">
+        <div style="font-weight:900; margin-bottom:4px;">${title}:</div>
+        <div>${items}</div>
+      </div>
+    `;
+  };
+
+  if (!d){
+    return `
+      <div style="opacity:0.85; font-weight:900; margin-bottom:6px;">Szczegóły dnia</div>
+      <div style="opacity:0.75;">Backend nie zwraca list osób dla tego raportu (na razie). Jak dodamy listy, pojawią się tu nazwiska.</div>
+    `;
+  }
+
+  return `
+    <div style="opacity:0.85; font-weight:900; margin-bottom:6px;">Szczegóły dnia</div>
+    ${block('Nieobecni (bez logowania)', d.absentNoLogin || d.absentNoLoginList)}
+    ${block('Urlopy', d.vacation || d.vacationList)}
+    ${block('L4', d.l4 || d.l4List)}
+    ${block('Inne', d.other || d.otherList)}
+  `;
+}    
+
 async function loadDashboardReport(showToast){
   const st = document.getElementById('dashReportStatus');
   const box = document.getElementById('dashReportBox');
