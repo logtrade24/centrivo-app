@@ -2777,7 +2777,11 @@ body.dark-mode .workers-table thead th{
 .workers-table{
   border-collapse: separate;
   border-spacing: 0;
-}    
+}   
+
+/* KPI raportu okresowego */
+.report-kpi-card { color: #111827; }              /* light */
+body.dark-mode .report-kpi-card { color: #e5e7eb; } /* dark */    
     
 </style>
 
@@ -4240,45 +4244,45 @@ function renderDashboardReportTable(rows){
         '#ef4444';
 
        let html = `
-           <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 12px 0;">
-        
-          <div style="flex:1; min-width:220px; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color:inherit;">
-            <div style="opacity:0.75; font-weight:800; font-size:12px;">Średnia frekwencja</div>
-            <div style="font-size:22px; font-weight:900; color:${avgFrekwColor};">${avgFrekw}%</div>
-          </div>
-        
-          <div style="flex:1; min-width:220px; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color:inherit;">
-            <div style="opacity:0.75; font-weight:800; font-size:12px;">Najlepszy dzień</div>
-            <div style="font-size:18px; font-weight:900; color:inherit;">
-              ${bestDate}
-              <span style="color:${bestColor}; margin-left:8px;">${bestFrekw}%</span>
-            </div>
-          </div>
-        
-          <div style="flex:1; min-width:220px; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color:inherit;">
-            <div style="opacity:0.75; font-weight:800; font-size:12px;">Najgorszy dzień</div>
-            <div style="font-size:18px; font-weight:900; color:inherit;">
-              ${worstDate}
-              <span style="color:${worstColor}; margin-left:8px;">${worstFrekw}%</span>
-            </div>
-          </div>
-        
-        </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 12px 0;">
+
+    <div class="report-kpi-card" style="flex:1; min-width:220px; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);">
+      <div style="opacity:0.75; font-weight:800; font-size:12px;">Średnia frekwencja</div>
+      <div style="font-size:22px; font-weight:900; color:${avgFrekwColor};">${avgFrekw}%</div>
+    </div>
+
+    <div class="report-kpi-card" style="flex:1; min-width:220px; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);">
+      <div style="opacity:0.75; font-weight:800; font-size:12px;">Najlepszy dzień</div>
+      <div style="font-size:18px; font-weight:900;">
+        ${bestDate}
+        <span style="color:${bestColor}; margin-left:8px;">${bestFrekw}%</span>
+      </div>
+    </div>
+
+    <div class="report-kpi-card" style="flex:1; min-width:220px; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);">
+      <div style="opacity:0.75; font-weight:800; font-size:12px;">Najgorszy dzień</div>
+      <div style="font-size:18px; font-weight:900;">
+        ${worstDate}
+        <span style="color:${worstColor}; margin-left:8px;">${worstFrekw}%</span>
+      </div>
+    </div>
+
+  </div>
 
     <table class="workers-table">
-      <thead>
-        <tr>
-          <th>Data</th>
-          <th>Zaplanowani</th>
-          <th>Nieobecni (bez logowania)</th>
-          <th>Urlopy</th>
-          <th>L4</th>
-          <th>Inne</th>
-          <th>Frekwencja</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Zaplanowani</th>
+        <th>Nieobecni (bez logowania)</th>
+        <th>Urlopy</th>
+        <th>L4</th>
+        <th>Inne</th>
+        <th>Frekwencja</th>
+      </tr>
+    </thead>
+    <tbody>
+`;
 
     list.forEach((r, i) => {
     const date = formatDatePLShort(r.date);
