@@ -4489,62 +4489,84 @@ function renderWorkersTable(shifts) {
       else if (status.occasionalType) timeInfo = status.occasionalType;
 
       // 2) jeśli ktoś miał ENTRY dziś (nawet jak teraz jest NIEOBECNY) -> pokaż realne czasy z logów
-        else if (worker.workSummary && worker.workSummary.hasAnyEntryToday) {
-          const ws = worker.workSummary || null;
-          const fromHM = ws?.firstEntryHM || '';
-          const toHM = ws?.lastExitHM || '…';
-          const durTxt = fmtDuration(Number(ws?.workMinutes || 0));
-        
-          if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
-          else timeInfo = durTxt || '';
-        }
-        
-        // 3) zmiana nierozpoczęta -> pusto (tylko tu)
-        else if (!started) {
-          timeInfo = '';
-        }
+      else if (worker.workSummary && worker.workSummary.hasAnyEntryToday) {
+        const ws = worker.workSummary || null;
+        const fromHM = ws?.firstEntryHM || '';
+        const toHM = ws?.lastExitHM || '…';
+        const durTxt = fmtDuration(Number(ws?.workMinutes || 0));
 
-      // 3) praca/przerwa -> pokazujemy zakres + czas
+        if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
+        else timeInfo = durTxt || '';
+      }
+
+      // 3) zmiana nierozpoczęta -> pusto (tylko tu)
+      else if (!started) {
+        timeInfo = '';
+      }
+
+      // 4) praca/przerwa -> pokazujemy zakres + czas
       else if (status.workTime || status.breakTime || statusKey === 'working' || statusKey === 'break') {
-          const ws = worker.workSummary || null;
-        
-          // ✅ Preferuj realne czasy z logów (backend)
-          if (ws && (ws.firstEntryHM || ws.lastExitHM || ws.workMinutes !== undefined)) {
-            const fromHM = ws.firstEntryHM || '';
-            const toHM = ws.lastExitHM || '…';
-            const durTxt = fmtDuration(Number(ws.workMinutes || 0));
-        
-            if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
-            else timeInfo = durTxt;
+        const ws = worker.workSummary || null;
+
+        // ✅ Preferuj realne czasy z logów (backend)
+        if (ws && (ws.firstEntryHM || ws.lastExitHM || ws.workMinutes !== undefined)) {
+          const fromHM = ws.firstEntryHM || '';
+          const toHM = ws.lastExitHM || '…';
+          const durTxt = fmtDuration(Number(ws.workMinutes || 0));
+
+          if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
+          else timeInfo = durTxt;
+        } else {
+          // fallback – stara logika
+          const fromHM = shiftStartHM || '';
+          const toHM = finished ? (shiftEndHM || '') : nowHM;
+
+          let durTxt = '';
+          if (finished && startMin !== null && endMin !== null) {
+            durTxt = fmtDuration(endMin - startMin);
           } else {
-            // fallback – stara logika
-            const fromHM = shiftStartHM || '';
-            const toHM = finished ? (shiftEndHM || '') : nowHM;
-        
-            let durTxt = '';
-            if (finished && startMin !== null && endMin !== null) {
-              durTxt = fmtDuration(endMin - startMin);
-            } else {
-              durTxt = status.workTime || status.breakTime || (
-                startMin !== null ? fmtDuration(nowMin - startMin) : ''
-              );
-            }
-        
-            if (fromHM && toHM) {
-              timeInfo = `${fromHM}–${toHM}${durTxt ? ' • ' + durTxt : ''}`;
-            } else {
-              timeInfo = durTxt || '';
-            }
+            durTxt = status.workTime || status.breakTime || (
+              startMin !== null ? fmtDuration(nowMin - startMin) : ''
+            );
+          }
+
+          if (fromHM && toHM) {
+            timeInfo = `${fromHM}–${toHM}${durTxt ? ' • ' + durTxt : ''}`;
+          } else {
+            timeInfo = durTxt || '';
           }
         }
+      }
 
-      // reszta (nieobecny w aktywnej/ zakończonej zmianie) zostaje '---'
+      // ===== 3A: ⚠ nietypowe sytuacje (front-only) =====
+      const ws = worker.workSummary || null;
+      const hasEntryToday = !!ws?.hasAnyEntryToday;
+
+      // poza zmianą: zmiana nie wystartowała, a on ma entry dziś
+      const outsideShift = (!started && hasEntryToday);
+
+      // spóźnienie: firstEntry > start zmiany (tylko jeśli znamy oba)
+      const late = (ws?.firstEntryHM && shiftStartHM) ? (ws.firstEntryHM > shiftStartHM) : false;
+
+      // wcześniejsze wyjście: lastExit < koniec zmiany (tylko jeśli znamy oba)
+      const earlyLeave = (ws?.lastExitHM && shiftEndHM) ? (ws.lastExitHM < shiftEndHM) : false;
+
+      const showAlert = outsideShift || late || earlyLeave;
+
+      const alertTitleParts = [];
+      if (outsideShift) alertTitleParts.push('poza zmianą');
+      if (late) alertTitleParts.push('spóźnienie');
+      if (earlyLeave) alertTitleParts.push('wcześniejsze wyjście');
+      const alertTitle = alertTitleParts.length ? `⚠ Nietypowa sytuacja: ${alertTitleParts.join(' / ')}` : '';
 
       html += `
         <tr>
           <td>${shiftKey}</td>
           <td>${status.icon || ''} ${worker.login}</td>
-          <td>${worker.name || ''}</td>
+          <td>
+            ${worker.name || ''}
+            ${showAlert ? `<span title="${escapeHtml(alertTitle)}" style="margin-left:6px; color:#f59e0b; font-weight:900;">⚠</span>` : ''}
+          </td>
           <td>${status.currentDepartment || worker.dept || '---'}</td>
           <td><span class="status-badge ${statusClass}">${status.statusText || 'NIEOBECNY'}</span></td>
           <td>${timeInfo}</td>
