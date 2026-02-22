@@ -3002,6 +3002,29 @@ body.dark-mode .progress-bar{ background: rgba(255,255,255,0.10); }
     <div class="loading">⏳ Ładowanie historii...</div>
   </div>
 
+    <h2 class="section-title">📊 RAPORT OKRESOWY</h2>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+    <div style="opacity:0.9; font-weight:800;">Okres:</div>
+
+    <select id="dashReportDays" class="code-input dash-filter-select" style="width:220px;">
+      <option value="7">Ostatnie 7 dni</option>
+      <option value="14">Ostatnie 14 dni</option>
+      <option value="30">Ostatnie 30 dni</option>
+      <option value="60">Ostatnie 60 dni</option>
+    </select>
+
+    <button class="dashboard-btn" onclick="loadDashboardReport(true)" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+      🔄 Odśwież raport
+    </button>
+
+    <div id="dashReportStatus" class="dash-status"></div>
+  </div>
+
+  <div id="dashReportBox">
+    <div class="loading">⏳ Ładowanie raportu...</div>
+  </div>              
+
 </div>
 
             <!-- WIDOK WYBORU PRACOWNIKA -->
@@ -4115,6 +4138,88 @@ async function apiAbsenceHistory(days){
   return data;
 }
 
+async function apiDashboardReport(days){
+  const login = String(sessionStorage.getItem('loggedInUser') || '').trim().toLowerCase();
+  if (!login) throw new Error('Brak loginu w sesji.');
+
+  const r = await fetch(`${API_BASE}/dashboard/report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      login,
+      dept: dashDeptFilter,
+      days
+    })
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+function renderDashboardReportTable(rows){
+  const list = Array.isArray(rows) ? rows : [];
+
+  let html = `
+    <table class="workers-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Zaplanowani</th>
+          <th>Nieobecni (bez logowania)</th>
+          <th>Urlopy</th>
+          <th>L4</th>
+          <th>Inne</th>
+          <th>Frekwencja</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  for (const r of list){
+    const date = formatDatePLShort(r.date);
+    html += `
+      <tr>
+        <td>${date}</td>
+        <td>${Number(r.planned||0)}</td>
+        <td>${Number(r.absentNoLogin||0)}</td>
+        <td>${Number(r.vacation||0)}</td>
+        <td>${Number(r.l4||0)}</td>
+        <td>${Number(r.other||0)}</td>
+        <td>${Number(r.frekw||0)}%</td>
+      </tr>
+    `;
+  }
+
+  html += `</tbody></table>`;
+  return html;
+}
+
+async function loadDashboardReport(showToast){
+  const st = document.getElementById('dashReportStatus');
+  const box = document.getElementById('dashReportBox');
+  const sel = document.getElementById('dashReportDays');
+
+  if (st) st.textContent = '⏳ Ładuję...';
+  if (box) box.innerHTML = `<div class="loading">⏳ Ładowanie raportu...</div>`;
+
+  try{
+    const days = Number(sel?.value || 7) || 7;
+    const data = await apiDashboardReport(days);
+    if (!data?.success) throw new Error(data?.message || 'Błąd danych');
+
+    if (box) box.innerHTML = renderDashboardReportTable(data.rows || []);
+    if (st) st.textContent = `✅ ${formatPlDateTime(data.periodEnd)} (${days} dni)`;
+
+    if (showToast) try { showNotification('Raport odświeżony', 'success'); } catch(e) {}
+  }catch(e){
+    console.error('Dashboard report error:', e);
+    if (st) st.textContent = `❌ ${e.message || e}`;
+    if (box) box.innerHTML = `<div class="loading">❌ Błąd ładowania raportu</div>`;
+    if (showToast) try { showNotification('Błąd pobrania raportu', 'error'); } catch(e2) {}
+  }
+}    
+
 function renderShiftCard(shift, shiftKey) {
   if (!shift.started) {
     return `
@@ -4652,6 +4757,7 @@ async function loadDashboardFull(showToast){
 
     // ✅ historia tylko przy prawdziwym odświeżeniu (fetch)
     await loadAbsenceHistory(null);
+    await loadDashboardReport(false);  
 
   }catch(e){
     console.error('Dashboard full error:', e);
