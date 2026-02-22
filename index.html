@@ -4565,7 +4565,7 @@ function renderWorkersTable(shifts) {
           <td>${status.icon || ''} ${worker.login}</td>
           <td>
             ${worker.name || ''}
-            ${showAlert ? `<span title="${escapeHtml(alertTitle)}" style="margin-left:6px; color:#f59e0b; font-weight:900;">⚠</span>` : ''}
+            ${showAlert ? `<span title="${alertTitle}" style="margin-left:6px; color:#f59e0b; font-weight:900;">⚠</span>` : ''}
           </td>
           <td>${status.currentDepartment || worker.dept || '---'}</td>
           <td><span class="status-badge ${statusClass}">${status.statusText || 'NIEOBECNY'}</span></td>
