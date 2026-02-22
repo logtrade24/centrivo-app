@@ -4244,21 +4244,21 @@ function renderWorkersTable(shifts) {
       else if (status.dayOffType) timeInfo = status.dayOffType;
       else if (status.occasionalType) timeInfo = status.occasionalType;
 
-      // 2) zmiana nierozpoczęta -> pusto (tylko tu)
-      else if (!started) {
-        timeInfo = '';
-      }
-
-          // 2.5) jeśli ktoś miał ENTRY dziś (nawet jak teraz jest NIEOBECNY) -> pokaż realne czasy z logów
-            else if (worker.workSummary && worker.workSummary.hasAnyEntryToday) {
-              const ws = worker.workSummary || null;
-              const fromHM = ws?.firstEntryHM || '';
-              const toHM = ws?.lastExitHM || '…';
-              const durTxt = fmtDuration(Number(ws?.workMinutes || 0));
-            
-              if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
-              else timeInfo = durTxt || '';
-            }
+      // 2) jeśli ktoś miał ENTRY dziś (nawet jak teraz jest NIEOBECNY) -> pokaż realne czasy z logów
+        else if (worker.workSummary && worker.workSummary.hasAnyEntryToday) {
+          const ws = worker.workSummary || null;
+          const fromHM = ws?.firstEntryHM || '';
+          const toHM = ws?.lastExitHM || '…';
+          const durTxt = fmtDuration(Number(ws?.workMinutes || 0));
+        
+          if (fromHM) timeInfo = `${fromHM}–${toHM} • ${durTxt}`;
+          else timeInfo = durTxt || '';
+        }
+        
+        // 3) zmiana nierozpoczęta -> pusto (tylko tu)
+        else if (!started) {
+          timeInfo = '';
+        }
 
       // 3) praca/przerwa -> pokazujemy zakres + czas
       else if (status.workTime || status.breakTime || statusKey === 'working' || statusKey === 'break') {
