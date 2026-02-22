@@ -4215,8 +4215,50 @@ function renderDashboardReportTable(rows){
     avgFrekw >= 85 ? '#f59e0b' :
     '#ef4444';
 
-  let html = `
-    <table class="workers-table">
+      let best = null;
+      let worst = null;
+    
+      for (const r of list){
+        const f = Number(r.frekw || 0);
+        if (!best || f > Number(best.frekw || 0)) best = r;
+        if (!worst || f < Number(worst.frekw || 0)) worst = r;
+      }
+    
+      const bestDate = best?.date ? formatDatePLShort(best.date) : '-';
+      const worstDate = worst?.date ? formatDatePLShort(worst.date) : '-';
+      const bestFrekw = best ? Number(best.frekw || 0) : 0;
+      const worstFrekw = worst ? Number(worst.frekw || 0) : 0;
+    
+      const bestColor =
+        bestFrekw >= 95 ? '#22c55e' :
+        bestFrekw >= 85 ? '#f59e0b' :
+        '#ef4444';
+    
+      const worstColor =
+        worstFrekw >= 95 ? '#22c55e' :
+        worstFrekw >= 85 ? '#f59e0b' :
+        '#ef4444';
+
+     let html = `
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 12px 0;">
+        <div style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);">
+          <div style="opacity:0.75; font-weight:800; font-size:12px;">Średnia frekwencja</div>
+          <div style="font-size:20px; font-weight:900; color:${avgFrekwColor};">${avgFrekw}%</div>
+        </div>
+    
+        <div style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);">
+          <div style="opacity:0.75; font-weight:800; font-size:12px;">Najlepszy dzień</div>
+          <div style="font-size:18px; font-weight:900;">${bestDate} <span style="color:${bestColor}; margin-left:8px;">${bestFrekw}%</span></div>
+        </div>
+    
+        <div style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);">
+          <div style="opacity:0.75; font-weight:800; font-size:12px;">Najgorszy dzień</div>
+          <div style="font-size:18px; font-weight:900;">${worstDate} <span style="color:${worstColor}; margin-left:8px;">${worstFrekw}%</span></div>
+        </div>
+      </div>
+    
+      <table class="workers-table">
+    `;
       <thead>
         <tr>
           <th>Data</th>
