@@ -4221,8 +4221,6 @@ function renderDashboardReportTable(rows){
     };
     
     const avgColors = getFrekwColors(avgFrekw);
-    const bestColors = getFrekwColors(bestFrekw);
-    const worstColors = getFrekwColors(worstFrekw);
 
       let best = null;
       let worst = null;
@@ -4237,6 +4235,8 @@ function renderDashboardReportTable(rows){
       const worstDate = worst?.date ? formatDatePLShort(worst.date) : '-';
       const bestFrekw = best ? Number(best.frekw || 0) : 0;
       const worstFrekw = worst ? Number(worst.frekw || 0) : 0;
+      const bestColors = getFrekwColors(bestFrekw);
+      const worstColors = getFrekwColors(worstFrekw);
     
       const bestColor =
         bestFrekw >= 95 ? '#22c55e' :
@@ -4255,7 +4255,7 @@ function renderDashboardReportTable(rows){
       <div style="font-size:22px; font-weight:900; color:${avgColors.text};">${avgFrekw}%</div>
     </div>
 
-      <div style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);">
+      <div style="flex:1; min-width:220px; padding:12px 14px; border-radius:14px; border:1px solid ${bestColors.border}; background:${bestColors.bg};">
         <div style="opacity:0.75; font-weight:800; font-size:12px;">Najlepszy dzień</div>
         <div style="font-size:18px; font-weight:900;">${bestDate} <span style="color:${bestColors.text}; margin-left:8px;">${bestFrekw}%</span></div>
       </div>
