@@ -4159,8 +4159,9 @@ async function apiDashboardReport(days){
 
 function renderDashboardReportTable(rows){
   const list = Array.isArray(rows) ? rows : [];
+  window._dashReportRows = list; // ✅ cache do rozwijania
 
-  let html = `
+  let html = ``
     <table class="workers-table">
       <thead>
         <tr>
@@ -4176,11 +4177,12 @@ function renderDashboardReportTable(rows){
       <tbody>
   `;
 
-  for (const r of list){
+    list.forEach((r, i) => {
     const date = formatDatePLShort(r.date);
+
     html += `
-      <tr>
-        <td>${date}</td>
+      <tr class="dash-report-row" data-i="${i}" onclick="toggleDashReportRow(${i})" style="cursor:pointer;">
+        <td style="font-weight:900;">${date} <span style="opacity:0.7; font-weight:700; font-size:12px;">(klik)</span></td>
         <td>${Number(r.planned||0)}</td>
         <td>${Number(r.absentNoLogin||0)}</td>
         <td>${Number(r.vacation||0)}</td>
@@ -4188,8 +4190,16 @@ function renderDashboardReportTable(rows){
         <td>${Number(r.other||0)}</td>
         <td>${Number(r.frekw||0)}%</td>
       </tr>
+
+      <tr id="dashReportDetailsRow_${i}" style="display:none;">
+        <td colspan="7" style="padding:10px 12px;">
+          <div id="dashReportDetails_${i}" style="border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px;">
+            ${renderDashReportDetails(r)}
+          </div>
+        </td>
+      </tr>
     `;
-  }
+  });
 
   html += `</tbody></table>`;
   return html;
