@@ -4858,6 +4858,14 @@ let liveFilter = 'ALL';
 let liveSelectedLogin = null;
 let liveRefreshTimer = null;
 
+function fmtDuration(mins){
+  mins = Math.max(0, Number(mins) || 0);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h <= 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
 // domyślny widok szczegółów
 function liveResetDetails(){
   const details = document.getElementById('workforceLiveDetails');
