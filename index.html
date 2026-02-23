@@ -3906,6 +3906,49 @@ body.dark-mode .report-kpi-card { color: #e5e7eb; } /* dark */
     </div>
 
 <script>
+// --- POLYFILL DO KOMUNIKACJI Z API RENDER ---
+window.google = {
+  script: {
+    get run() {
+      const state = { success: null, failure: null };
+      return new Proxy({}, {
+        get: function(target, prop) {
+          if (prop === 'withSuccessHandler') {
+            return function(handler) { state.success = handler; return this; };
+          }
+          if (prop === 'withFailureHandler') {
+            return function(handler) { state.failure = handler; return this; };
+          }
+          return function(...args) {
+            console.log("[Polyfill API] Wywołanie:", prop, args);
+            fetch('https://centivo-api.onrender.com/rpc', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ method: prop, args: args })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.error || data.success === false) {
+                  const errMsg = data.message || data.error || "Wystąpił błąd na serwerze";
+                  console.error("[Polyfill API] Błąd Backend:", errMsg);
+                  if (state.failure) state.failure(new Error(errMsg));
+              } else if (state.success) {
+                  state.success(data.result !== undefined ? data.result : data);
+              }
+            })
+            .catch(err => {
+              console.error("[Polyfill API] Błąd połącznia/Fetch:", err);
+              if (state.failure) state.failure(err);
+              else console.warn("API Error:", err.message);
+            });
+          };
+        }
+      });
+    }
+  }
+};
+// --- KONIEC POLYFILL ---
+
   // ===== API (Cloudflare Pages -> Render) =====
 const API_BASE = 'https://api.centrivo.pl';
 
