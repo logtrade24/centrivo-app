@@ -14650,6 +14650,221 @@ function loadEmployeesForL4() {
 window.loadPendingVacationRequests = loadPendingVacationRequests;
 window.loadEmployeesForL4 = loadEmployeesForL4;
 
+
+// ==========================================
+// OVERRIDES FOR VACATION LOADING (NO GOOGLE.SCRIPT.RUN)
+// ==========================================
+
+function loadVacationBalance() {
+    if (!currentUser || !currentUser.login) {
+        console.error('Brak currentUser lub login');
+        return;
+    }
+    
+    document.getElementById('vacationBalance').style.display = 'block';
+    console.log('Ładowanie saldo dla użytkownika:', currentUser.login);
+    
+    fetch(API_BASE+'/vacations/balance', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        if (res.success && res.balance) {
+            const balance = res.balance;
+            userVacationBalances[currentUser.login] = balance;
+            document.getElementById('urlopPrzysługujący').textContent = balance.przysługujący || 0;
+            document.getElementById('urlopZaległy').textContent = balance.zaległy || 0;
+            document.getElementById('urlopWykorzystany').textContent = balance.wykorzystany || 0;
+            document.getElementById('urlopPozostały').textContent = balance.pozostały || 0;
+            console.log('Zaktualizowano interfejs saldo urlopowego');
+        } else {
+             console.error('Błąd pobierania saldo API');
+        }
+    }).catch(e=>{
+        console.error('Błąd ładowania saldo:', e);
+    });
+}
+
+function loadUserVacationRequests(login) {
+    const list = document.getElementById('vacationRequestsList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align: center; padding: 20px;">⏳ Ładowanie historii wniosków...</div>';
+    
+    fetch(API_BASE+'/vacations/my-requests', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: login})
+    }).then(r=>r.json()).then(res=>{
+        const requests = res.requests || res.data || [];
+        if (requests.length === 0) {
+           list.innerHTML = '<div class="empty-state">Brak historii wniosków o urlop wypoczynkowy.</div>';
+           return;
+        }
+        let html = '';
+        requests.forEach(function(request) {
+            const statusClass = request.status === 'Zatwierdzony' ? 'approved' : request.status === 'Odrzucony' ? 'rejected' : 'pending';
+            const statusColor = request.status === 'Zatwierdzony' ? '#4CAF50' : request.status === 'Odrzucony' ? '#f44336' : '#ff9800';
+            const typeName = typeof getVacationTypeName === 'function' ? getVacationTypeName(request.type) : request.type;
+            
+            html += `<div class="vacation-request-item ${statusClass}">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div><strong>${request.dateFrom} - ${request.dateTo}</strong></div>
+                            <div style="color: ${statusColor}; font-weight: bold; font-size: 12px;">${request.status}</div>
+                        </div>
+                        <div style="margin: 5px 0; font-size: 13px;">${typeName} (${request.workingDays} dni)</div>
+                        ${request.comment ? `<div style="font-size: 11px; color: #666;">Komentarz: ${request.comment}</div>` : ''}
+                        ${request.managerComment ? `<div style="font-size: 11px; color: #1976d2; margin-top: 5px;">💬 Kierownik: ${request.managerComment}</div>` : ''}
+                        ${request.status === 'Zatwierdzony' ? `<button onclick="downloadVacationPDF('${request.id}')" style="margin-top: 8px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">📄 Pobierz PDF</button>` : ''}
+                     </div>`;
+        });
+        list.innerHTML = html;
+    }).catch(e => {
+        list.innerHTML = '<div class="empty-state" style="color:red;">Błąd ładowania wniosków</div>';
+    });
+}
+
+window.loadVacationBalance = loadVacationBalance;
+window.loadUserVacationRequests = loadUserVacationRequests;
+
+
+// ==========================================
+// MANAGER OVERRIDES FOR ABSENCES (NO GOOGLE.SCRIPT.RUN)
+// ==========================================
+
+function loadPendingDayOffRequests() {
+    const container = document.getElementById('managerVacationRequests');
+    if (!container) return;
+    container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie wniosków o dzień wolny...</p>';
+    
+    fetch(API_BASE+'/absences/dayoff/pending', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        const requests = res.requests || res.data || [];
+        if (!requests || requests.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o dzień wolny do zatwierdzenia</p>';
+            return;
+        }
+        let html = '';
+        requests.forEach(function(request) {
+            html += `<div class="vacation-request-item pending" id="req-${request.id}">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div><strong>${request.name}</strong> (${request.login})</div>
+                    <div style="font-size: 11px; color: #ff9800; font-weight: bold; background: #fff3e0; padding: 2px 6px; border-radius: 4px;">${request.type}</div>
+                </div>
+                <div style="margin: 8px 0; font-size: 14px;">
+                    📅 ${request.date} ${request.from && request.to ? `(${request.from} - ${request.to})` : ''}
+                </div>
+                ${request.reason ? `<div style="font-size: 12px; color: #555; margin-bottom: 8px; font-style: italic;">Powód: ${request.reason}</div>` : ''}
+                <div class="manager-controls" style="margin-top: 10px; display: flex; gap: 10px;">
+                    <button class="manager-btn approve" onclick="processDayOff(${request.id}, 'Zatwierdzony')" style="background: #4CAF50; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; flex: 1;">Zatwierdź</button>
+                    <button class="manager-btn reject" onclick="processDayOff(${request.id}, 'Odrzucony')" style="background: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; flex: 1;">Odrzuć</button>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+        if (typeof updateVacationBadge === 'function') updateVacationBadge(requests.length);
+    }).catch(e=>{
+        container.innerHTML = '<p style="color: red;">❌ Błąd ładowania</p>';
+    });
+}
+
+function loadPendingOccasionalRequests() {
+    const container = document.getElementById('managerVacationRequests');
+    if (!container) return;
+    container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie wniosków okolicznościowych...</p>';
+    
+    fetch(API_BASE+'/absences/occasional/pending', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        const requests = res.requests || res.data || [];
+        if (!requests || requests.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o urlop okolicznościowy do zatwierdzenia</p>';
+            return;
+        }
+        let html = '';
+        requests.forEach(function(request) {
+            html += `<div class="vacation-request-item pending" id="req-${request.id}">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div><strong>${request.name}</strong> (${request.login})</div>
+                    <div style="font-size: 11px; color: #9C27B0; font-weight: bold; background: #f3e5f5; padding: 2px 6px; border-radius: 4px;">${request.type}</div>
+                </div>
+                <div style="margin: 8px 0; font-size: 14px;">
+                    📅 ${request.startDate} do ${request.endDate} (${request.workingDays} dni)
+                </div>
+                ${request.note ? `<div style="font-size: 12px; color: #555; margin-bottom: 8px; font-style: italic;">Notatka: ${request.note}</div>` : ''}
+                <div class="manager-controls" style="margin-top: 10px; display: flex; gap: 10px;">
+                    <button class="manager-btn approve" onclick="processOccasionalLeave(${request.id}, 'Zatwierdzony')" style="background: #4CAF50; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; flex: 1;">Zatwierdź</button>
+                    <button class="manager-btn reject" onclick="processOccasionalLeave(${request.id}, 'Odrzucony')" style="background: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; flex: 1;">Odrzuć</button>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }).catch(e=>{
+        container.innerHTML = '<p style="color: red;">❌ Błąd ładowania</p>';
+    });
+}
+
+window.processDayOff = function(requestId, decision) {
+    const comment = decision === 'Odrzucony' ? prompt('Podaj powód odrzucenia (opcjonalnie):') || '' : '';
+    
+    // Optymistyczne ukrycie
+    const card = document.getElementById('req-' + requestId);
+    if (card) {
+        card.style.opacity = '0.5';
+        card.style.pointerEvents = 'none';
+    }
+    
+    fetch(API_BASE+'/absences/dayoff/update-status', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: requestId, newStatus: decision, managerComment: comment, login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        if (res.success) {
+            if (card) card.remove();
+            if (typeof showNotification === 'function') showNotification('✅ ' + res.message, 'success');
+        } else {
+            if (card) card.style.opacity = '1';
+            if (card) card.style.pointerEvents = 'auto';
+            if (typeof showNotification === 'function') showNotification('❌ Błąd: ' + res.message, 'error');
+        }
+    }).catch(e=>{
+        if (card) card.style.opacity = '1';
+        if (card) card.style.pointerEvents = 'auto';
+        if (typeof showNotification === 'function') showNotification('❌ Błąd API', 'error');
+    });
+};
+
+window.processOccasionalLeave = function(requestId, decision) {
+    const comment = decision === 'Odrzucony' ? prompt('Podaj powód odrzucenia (opcjonalnie):') || '' : '';
+    
+    // Optymistyczne ukrycie
+    const card = document.getElementById('req-' + requestId);
+    if (card) {
+        card.style.opacity = '0.5';
+        card.style.pointerEvents = 'none';
+    }
+    
+    fetch(API_BASE+'/absences/occasional/update-status', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: requestId, newStatus: decision, managerComment: comment, login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        if (res.success) {
+            if (card) card.remove();
+            if (typeof showNotification === 'function') showNotification('✅ ' + res.message, 'success');
+        } else {
+            if (card) card.style.opacity = '1';
+            if (card) card.style.pointerEvents = 'auto';
+            if (typeof showNotification === 'function') showNotification('❌ Błąd: ' + res.message, 'error');
+        }
+    }).catch(e=>{
+        if (card) card.style.opacity = '1';
+        if (card) card.style.pointerEvents = 'auto';
+        if (typeof showNotification === 'function') showNotification('❌ Błąd API', 'error');
+    });
+};
+
+window.loadPendingDayOffRequests = loadPendingDayOffRequests;
+window.loadPendingOccasionalRequests = loadPendingOccasionalRequests;
+
 </script>
 
     <!-- MODAL: WYŚWIETLANIE OGŁOSZENIA DLA PRACOWNIKA -->
