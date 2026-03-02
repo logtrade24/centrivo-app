@@ -1,7 +1,7 @@
 <!--
 ⚠️⚠️⚠️ UWAGA - WERSJA PRODUKCYJNA ⚠️⚠️⚠️
 
-🚫 NIE EDYTUJ TEGO PLIKU BEZPOŚREDNIO!!
+🚫 NIE EDYTUJ TEGO PLIKU BEZPOŚREDNIO!
 
 📝 Kopia robocza (do edycji):
 https://script.google.com/https://docs.google.com/spreadsheets/d/12HgcCifzhbhf_V6dunBbcrxSsWezBKo6NUizDQT9q8Q/edit?gid=0#gid=0/edit
@@ -3979,11 +3979,10 @@ async function apiScan(code){
 }
 
     async function apiVacationBalance(login){
-  const code = (currentUser && currentUser.code) ? String(currentUser.code).trim() : "";
   const r = await fetch(`${API_BASE}/vacations/balance`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login, code })
+    body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
@@ -3991,11 +3990,10 @@ async function apiScan(code){
 }
 
 async function apiMyVacationRequests(login){
-  const code = (currentUser && currentUser.code) ? String(currentUser.code).trim() : "";
   const r = await fetch(`${API_BASE}/vacations/my-requests`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login, code })
+    body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
@@ -7996,40 +7994,32 @@ if (window.isChangingOperation && currentUser) {
          * Ładuje saldo urlopowe dla widoku wyboru typu
          */
         function loadAbsenceTypeBalance() {
-  if (!currentUser || !currentUser.login) {
-    console.error('Brak currentUser lub login');
-    document.getElementById('absTypePrzysługujący').textContent = '-';
-    document.getElementById('absTypeZaległy').textContent = '-';
-    document.getElementById('absTypeWykorzystany').textContent = '-';
-    document.getElementById('absTypePozostały').textContent = '-';
-    return;
-  }
-
-  apiVacationBalance(currentUser.login)
-    .then(resp => {
-      const balance = (resp && resp.balance) ? resp.balance : resp;
-      if (!balance) throw new Error('Puste saldo z API');
-
-      document.getElementById('absTypePrzysługujący').textContent = balance.przysługujący || 0;
-      document.getElementById('absTypeZaległy').textContent = balance.zaległy || 0;
-      document.getElementById('absTypeWykorzystany').textContent = balance.wykorzystany || 0;
-      document.getElementById('absTypePozostały').textContent = balance.pozostały || 0;
-
-      // cache (żeby selectAbsenceType nie widział 0)
-      userVacationBalances[currentUser.login] = balance;
-
-      // blokada kafelka, jeśli 0
-      updateVacationTileState(balance.pozostały || 0);
-    })
-    .catch(err => {
-      console.error('Błąd ładowania salda (API):', err);
-      document.getElementById('absTypePrzysługujący').textContent = '-';
-      document.getElementById('absTypeZaległy').textContent = '-';
-      document.getElementById('absTypeWykorzystany').textContent = '-';
-      document.getElementById('absTypePozostały').textContent = '-';
-      updateVacationTileState(0);
-    });
-}
+        if (typeof google === 'undefined' || !google.script) {
+            document.getElementById('absTypePrzysługujący').textContent = '26';
+            document.getElementById('absTypeZaległy').textContent = '0';
+            document.getElementById('absTypeWykorzystany').textContent = '5';
+            document.getElementById('absTypePozostały').textContent = '21';
+            return;
+        }
+        
+        google.script.run
+            .withSuccessHandler(function(balance) {
+                document.getElementById('absTypePrzysługujący').textContent = balance.przysługujący || 0;
+                document.getElementById('absTypeZaległy').textContent = balance.zaległy || 0;
+                document.getElementById('absTypeWykorzystany').textContent = balance.wykorzystany || 0;
+                document.getElementById('absTypePozostały').textContent = balance.pozostały || 0;
+                
+                // Zapisz do cache
+                userVacationBalances[currentUser.login] = balance;
+                
+                // ✅ NOWE: Wizualnie zablokuj kafelek urlopu jeśli 0 dni
+                updateVacationTileState(balance.pozostały);
+            })
+            .withFailureHandler(function(error) {
+                console.error('Błąd ładowania salda:', error);
+            })
+            .getUserVacationBalance(currentUser.login);
+    }
 
     /**
  * Aktualizuje stan kafelka urlopu wypoczynkowego (aktywny/zablokowany)
@@ -8526,13 +8516,20 @@ function updateVacationTileState(pozostalyDni) {
             console.log('Wysyłam wniosek o dzień wolny:', dayOffData);
             
             // Sprawdź czy backend dostępny
-            if (typeof google === 'undefined' || !google.script) {
-                showNotification('✅ Wniosek złożony (tryb testowy)', 'success');
-                setTimeout(() => {
-                    showView('absenceType');
-                }, 2000);
-                return;
-            }
+            showNotification('⏳ Wysyłam wniosek...', 'info');
+            fetch(API_BASE+'/absences/dayoff/create', {
+               method: 'POST',
+               headers: {'Content-Type': 'application/json'},
+               body: JSON.stringify(dayOffData)
+            }).then(r=>r.json()).then(res=>{
+                if(res.success) {
+                   showNotification('✅ Wniosek o dzień wolny złożony!', 'success');
+                   setTimeout(() => { showView('absenceType'); loadDayOffHistory && loadDayOffHistory(); }, 2000);
+                } else {
+                   showNotification('❌ Błąd: '+res.message, 'error');
+                }
+            }).catch(e=>showNotification('❌ Błąd: '+e, 'error'));
+            return;
             
             // Pokaż ładowanie
             showNotification('⏳ Wysyłam wniosek...', 'info');
@@ -8748,13 +8745,18 @@ function updateVacationTileState(pozostalyDni) {
 
           console.log('Wysyłam wniosek o urlop okolicznościowy:', occasionalData);
 
-          if (typeof google === 'undefined' || !google.script) {
-            showNotification('✅ Wniosek złożony (tryb testowy)', 'success');
-            setTimeout(() => {
-              showView('absenceType');
-            }, 2000);
+          showNotification('⏳ Wysyłam wniosek...', 'info');
+            fetch(API_BASE+'/absences/occasional/create', {
+               method: 'POST',
+               headers: {'Content-Type': 'application/json'},
+               body: JSON.stringify(occasionalData)
+            }).then(r=>r.json()).then(res=>{
+                if(res.success) {
+                   showNotification('✅ Wniosek złożony!', 'success');
+                   setTimeout(() => { showView('absenceType'); loadOccasionalLeaveHistory && loadOccasionalLeaveHistory(); }, 2000);
+                } else { showNotification('❌ Błąd: '+res.message, 'error'); }
+            }).catch(e=>showNotification('❌ Błąd: '+e, 'error'));
             return;
-          }
 
           showNotification('✅ Wniosek o urlop okolicznościowy złożony!', 'success');
 
@@ -9287,16 +9289,20 @@ function updateVacationTileState(pozostalyDni) {
             console.log('Zapisuję plan roczny:', planData);
             
             // Sprawdź czy backend dostępny
-            if (typeof google === 'undefined' || !google.script) {
-                let msg = '✅ Plan urlopowy zapisany (tryb testowy):\n';
-                if (hasNewDates) msg += `  + ${yearPlanSelectedDates.length} nowych dni\n`;
-                if (hasRemovedDates) msg += `  - ${yearPlanRemovedDates.length} usuniętych dni`;
-                showNotification(msg, 'success');
-                setTimeout(() => {
-                    showView('absenceType');
-                }, 2000);
-                return;
-            }
+            showNotification(loadingMsg, 'info');
+            fetch(API_BASE+'/absences/yearplan/save', {
+               method: 'POST',
+               headers: {'Content-Type': 'application/json'},
+               body: JSON.stringify(planData)
+            }).then(r=>r.json()).then(res=>{
+                if(res.success) {
+                   showNotification('✅ Zapisano plan roczny!', 'success');
+                   yearPlanSelectedDates = [];
+                   yearPlanRemovedDates = [];
+                   setTimeout(() => { showView('absenceType'); }, 2000);
+                } else { showNotification('❌ Błąd: '+res.message, 'error'); }
+            }).catch(e=>showNotification('❌ Błąd: '+e, 'error'));
+            return;
             
             // Pokaż ładowanie
             let loadingMsg = '⏳ Zapisuję zmiany w planie...';
@@ -9547,7 +9553,6 @@ function updateVacationTileState(pozostalyDni) {
                 // 2) zapis w tle do API
                 apiCreateVacationRequest({
                     login: currentUser.login,
-                    code: currentUser.code,
                     startDate,
                     endDate,
                     comment,
@@ -11678,37 +11683,47 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         }
 
         function loadVacationBalance() {
-          if (!currentUser || !currentUser.login) {
-            console.error('Brak currentUser lub login');
-            return;
-          }
-        
-          apiVacationBalance(currentUser.login)
-            .then(resp => {
-              const balance = (resp && resp.balance) ? resp.balance : resp;
-              console.log('Otrzymano saldo z API:', balance);
-        
-              if (balance) {
-                userVacationBalances[currentUser.login] = balance;
-        
-                document.getElementById('urlopPrzysługujący').textContent = balance.przysługujący || 0;
-                document.getElementById('urlopZaległy').textContent = balance.zaległy || 0;
-                document.getElementById('urlopWykorzystany').textContent = balance.wykorzystany || 0;
-                document.getElementById('urlopPozostały').textContent = balance.pozostały || 0;
-        
+            if (typeof google === 'undefined' || !google.script) {
                 document.getElementById('vacationBalance').style.display = 'block';
-                updateVacationTileState(balance.pozostały || 0);
-              } else {
-                console.error('Otrzymano puste saldo');
-                document.getElementById('vacationBalance').style.display = 'block';
-                updateVacationTileState(0);
-              }
-            })
-            .catch(err => {
-              console.error('Błąd ładowania saldo (API):', err);
-              document.getElementById('vacationBalance').style.display = 'block';
-              updateVacationTileState(0);
-            });
+                document.getElementById('urlopPrzysługujący').textContent = '20';
+                document.getElementById('urlopZaległy').textContent = '0';
+                document.getElementById('urlopWykorzystany').textContent = '5';
+                document.getElementById('urlopPozostały').textContent = '15';
+                return;
+            }
+            
+            if (!currentUser || !currentUser.login) {
+                console.error('Brak currentUser lub login');
+                return;
+            }
+            
+            console.log('Ładowanie saldo dla użytkownika:', currentUser.login);
+            
+            google.script.run
+                .withSuccessHandler(function(balance) {
+                    console.log('Otrzymano saldo z serwera:', balance);
+                    
+                    if (balance) {
+                        userVacationBalances[currentUser.login] = balance;
+                        
+                        document.getElementById('urlopPrzysługujący').textContent = balance.przysługujący || 0;
+                        document.getElementById('urlopZaległy').textContent = balance.zaległy || 0;
+                        document.getElementById('urlopWykorzystany').textContent = balance.wykorzystany || 0;
+                        document.getElementById('urlopPozostały').textContent = balance.pozostały || 0;
+                        document.getElementById('vacationBalance').style.display = 'block';
+                        
+                        console.log('Zaktualizowano interfejs saldo urlopowego');
+                        
+                    } else {
+                        console.error('Otrzymano puste saldo');
+                        document.getElementById('vacationBalance').style.display = 'block';
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error('Błąd ładowania saldo:', error);
+                    document.getElementById('vacationBalance').style.display = 'block';
+                })
+                .getUserVacationBalance(currentUser.login);
         }
 
         function downloadVacationPDF(requestId) {
@@ -12614,11 +12629,22 @@ function changeTicketStatus(newStatus) {
         }
     }
     
-    if (typeof google === 'undefined' || !google.script) {
-        showNotification('Status zmieniony (tryb testowy)', 'success');
-        closeTicketDetailsModal();
-        return;
-    }
+    showNotification('⏳ Zmieniam status...', 'info');
+    fetch(API_BASE+'/tickets/update-status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: currentTicketDetails.id, status: newStatus, response: comment})
+    }).then(r=>r.json()).then(result=>{
+        if (result.success) {
+            showNotification('✅ ' + result.message, 'success');
+            closeTicketDetailsModal();
+            if(typeof loadAllTickets === 'function') loadAllTickets();
+            if(typeof updateTicketsNotificationBadge === 'function') updateTicketsNotificationBadge();
+        } else {
+            showNotification('❌ ' + result.message, 'error');
+        }
+    }).catch(e=>showNotification('❌ Błąd: '+e, 'error'));
+    return;
     
     console.log('Zmiana statusu ticketu:', currentTicketDetails.id, 'na:', newStatus);
     
