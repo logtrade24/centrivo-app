@@ -7809,42 +7809,42 @@ if (window.isChangingOperation && currentUser) {
 
         // ===== WERYFIKACJA KODU URLOPOWEGO =====
         window.confirmVacationUserCode = function() {
-            const inputCode = document.getElementById('vacationVerificationCodeInput').value.trim();
-            
+            const inputEl = document.getElementById('vacationVerificationCodeInput');
+            const inputCode = (inputEl ? inputEl.value : '').trim();
+        
             if (!inputCode) {
                 showNotification('Wpisz kod EAN', 'error');
                 return;
             }
-            
+        
             const cleanInputCode = inputCode.replace(/^~+/, '').replace(/~+$/, '').trim();
-            
             console.log('Weryfikacja urlopu - kod po oczyszczeniu:', cleanInputCode);
-            
-            // ✅ ZMIANA: Znajdź użytkownika po kodzie EAN (bez wcześniejszego wyboru)
-            let foundUser = null;
-            for (const [deptId, dept] of Object.entries(departments)) {
-                const user = dept.users.find(u => {
-                    const storedCode = u.code.toString().replace(/^~+/, '').replace(/~+$/, '').trim();
-                    return storedCode === cleanInputCode;
+        
+            // ✅ API zamiast szukania po departments/users
+            apiLookupEmployeeByCode(cleanInputCode)
+                .then((data) => {
+                    const foundUser = {
+                        login: data.login,
+                        name: data.name,
+                        status: data.status,
+                        code: cleanInputCode
+                    };
+        
+                    currentUser = foundUser;
+                    selectedUserForVacation = null;
+        
+                    showAbsenceTypeSelection();
+                    showNotification('Weryfikacja pomyślna - wybierz rodzaj nieobecności', 'success');
+                })
+                .catch((err) => {
+                    console.error('❌ Vacation verify error:', err);
+                    showNotification(err?.message || 'Nieprawidłowy kod EAN', 'error');
+        
+                    if (inputEl) {
+                        inputEl.value = '';
+                        inputEl.focus();
+                    }
                 });
-                if (user) {
-                    foundUser = user;
-                    break;
-                }
-            }
-            
-            if (foundUser) {
-                currentUser = foundUser;
-                selectedUserForVacation = null;
-                
-                // Pokaż wybór typu nieobecności
-                showAbsenceTypeSelection();
-                showNotification('Weryfikacja pomyślna - wybierz rodzaj nieobecności', 'success');
-            } else {
-                showNotification('Nieprawidłowy kod EAN', 'error');
-                document.getElementById('vacationVerificationCodeInput').value = '';
-                document.getElementById('vacationVerificationCodeInput').focus();
-            }
         };
 
         // ===== FUNKCJA OBSŁUGI AKCJI =====
