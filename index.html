@@ -14644,23 +14644,8 @@ function loadEmployeesForL4() {
 }
 
 // Oprócz powyższych brakowało jeszcze list dla Occasional, DayOff w widoku kierownika?
-// Skrypt zawiera jeszcze wywołania do googla, spróbujemy wyłączyć je w pełni przez proxy:
-if (!window._googleScriptProxyActive) {
-    window.google = window.google || {};
-    window.google.script = window.google.script || {};
-    window.google.script.run = new Proxy({}, {
-        get: function(target, prop) {
-            console.warn("Złapano wywołanie google.script.run." + prop + " ! Próba użycia proxy...");
-            return function() {
-                // Mock return to prevent UI crash
-                if (prop === 'withSuccessHandler') return window.google.script.run;
-                if (prop === 'withFailureHandler') return window.google.script.run;
-                return {};
-            };
-        }
-    });
-    window._googleScriptProxyActive = true;
-}
+
+
 
 window.loadPendingVacationRequests = loadPendingVacationRequests;
 window.loadEmployeesForL4 = loadEmployeesForL4;
