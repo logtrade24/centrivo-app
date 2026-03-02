@@ -7431,110 +7431,65 @@ if (window.isChangingOperation && currentUser) {
                 showNotification('Zeskanuj swój kod EAN', 'info');
             };
 
-        // ===== FUNKCJA WYBORU UŻYTKOWNIKA =====
-        window.selectUser = function(userLogin) {
-            if (window.vacationMode) {
-                showVacationPlanning(userLogin);
-                return;
-            }
-
-            if (userLogin === 'jerzyd') {
-                console.log('🔄 Sprawdzam wnioski dla kierownika...');
-                
-                if (typeof google !== 'undefined' && google.script) {
-                    google.script.run
-                        .withSuccessHandler(function(count) {
-                            pendingVacationCount = count;
-                            console.log('📊 Licznik zaktualizowany:', count);
-                            
-                            if (count > 0) {
-                                console.log('✅ Są oczekujące wnioski - panel kierownika');
-                                selectedUserForVerification = { 
-                                    login: userLogin, 
-                                    name: 'Jerzy Dwurznik', 
-                                    isManagerAccess: true 
-                                };
-                                
-                                document.getElementById('selectedUserName').textContent = 'Jerzy Dwurznik';
-                                document.getElementById('selectedDepartmentName').textContent = 'Panel Kierownika';
-                                
-                                showView('verification');
-                                
-                                setTimeout(() => {
-                                    const verificationInput = document.getElementById('verificationCodeInput');
-                                    if (verificationInput) {
-                                        verificationInput.value = '';
-                                        verificationInput.focus();
-                                    }
-                                }, 100);
-                                
-                                showNotification('Zweryfikuj tożsamość aby zarządzać urlopami', 'info');
-                                return;
-                            } else {
-                                console.log('ℹ️ Brak oczekujących wniosków - normalny przepływ');
-                                proceedWithNormalUserFlow(userLogin);
-                            }
-                        })
-                        .withFailureHandler(function(error) {
-                            console.error('❌ Błąd sprawdzania wniosków:', error);
-                            proceedWithNormalUserFlow(userLogin);
-                        })
-                        .getPendingVacationCount();
-                    
-                    return;
-                }
-            }
-
-            proceedWithNormalUserFlow(userLogin);
-        };
-
-        function proceedWithNormalUserFlow(userLogin) {
-            let foundUser = null;
-            let foundDepartment = null;
-
-            for (const [deptId, dept] of Object.entries(departments)) {
-                const user = dept.users.find(u => u.login === userLogin);
-                if (user) {
-                    foundUser = user;
-                    foundDepartment = deptId;
-                    break;
-                }
-            }
-            
-            if (foundUser) {
-                selectedUserForVerification = foundUser;
-                
-                const departmentNames = {
-                    'przyjecie': 'Przyjęcie dostaw',
-                    'rozladunek': 'Rozładunek ręczny kontenera',
-                    'zaladunek': 'Załadunek ręczny kontenera',
-                    'relokacja': 'Relokacja',
-                    'kompletacja': 'Kompletacja zamówień',
-                    'weryfikacja': 'Weryfikacja zamówień',
-                    'co-packing': 'Co-packing',
-                    'operacje-porzadkowe': 'Operacje porządkowe',
-                    'inwentaryzacja': 'Inwentaryzacja'
-                };
-                
-                const targetDepartment = currentDepartment || foundDepartment;
-                const deptName = departmentNames[targetDepartment] || targetDepartment;
-                
-                document.getElementById('selectedUserName').textContent = foundUser.name;
-                document.getElementById('selectedDepartmentName').textContent = deptName;
-                
-                showView('verification');
-                
-                setTimeout(() => {
-                    const verificationInput = document.getElementById('verificationCodeInput');
-                    if (verificationInput) {
-                        verificationInput.value = '';
-                        verificationInput.focus();
+                // ===== FUNKCJA WYBORU UŻYTKOWNIKA =====
+                window.selectUser = function(userLogin) {
+                    // tryb urlopów: po zeskanowaniu pracownika przechodzimy dalej w urlopach
+                    if (window.vacationMode) {
+                        showVacationPlanning(userLogin);
+                        return;
                     }
-                }, 100);
-                
-                showNotification('Potwierdź swoją tożsamość kodem EAN', 'info');
-            }
-        }
+        
+                    // normalny przepływ (bez google.script.run)
+                    proceedWithNormalUserFlow(userLogin);
+                };
+        
+                function proceedWithNormalUserFlow(userLogin) {
+                    let foundUser = null;
+                    let foundDepartment = null;
+        
+                    for (const [deptId, dept] of Object.entries(departments)) {
+                        const user = dept.users.find(u => u.login === userLogin);
+                        if (user) {
+                            foundUser = user;
+                            foundDepartment = deptId;
+                            break;
+                        }
+                    }
+                    
+                    if (foundUser) {
+                        selectedUserForVerification = foundUser;
+                        
+                        const departmentNames = {
+                            'przyjecie': 'Przyjęcie dostaw',
+                            'rozladunek': 'Rozładunek ręczny kontenera',
+                            'zaladunek': 'Załadunek ręczny kontenera',
+                            'relokacja': 'Relokacja',
+                            'kompletacja': 'Kompletacja zamówień',
+                            'weryfikacja': 'Weryfikacja zamówień',
+                            'co-packing': 'Co-packing',
+                            'operacje-porzadkowe': 'Operacje porządkowe',
+                            'inwentaryzacja': 'Inwentaryzacja'
+                        };
+                        
+                        const targetDepartment = currentDepartment || foundDepartment;
+                        const deptName = departmentNames[targetDepartment] || targetDepartment;
+                        
+                        document.getElementById('selectedUserName').textContent = foundUser.name;
+                        document.getElementById('selectedDepartmentName').textContent = deptName;
+                        
+                        showView('verification');
+                        
+                        setTimeout(() => {
+                            const verificationInput = document.getElementById('verificationCodeInput');
+                            if (verificationInput) {
+                                verificationInput.value = '';
+                                verificationInput.focus();
+                            }
+                        }, 100);
+                        
+                        showNotification('Potwierdź swoją tożsamość kodem EAN', 'info');
+                    }
+                }
 
         // ===== WERYFIKACJA KODU UŻYTKOWNIKA =====
         window.confirmUserCode = function() {
