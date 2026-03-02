@@ -7996,32 +7996,40 @@ if (window.isChangingOperation && currentUser) {
          * Ładuje saldo urlopowe dla widoku wyboru typu
          */
         function loadAbsenceTypeBalance() {
-        if (typeof google === 'undefined' || !google.script) {
-            document.getElementById('absTypePrzysługujący').textContent = '26';
-            document.getElementById('absTypeZaległy').textContent = '0';
-            document.getElementById('absTypeWykorzystany').textContent = '5';
-            document.getElementById('absTypePozostały').textContent = '21';
-            return;
-        }
-        
-        google.script.run
-            .withSuccessHandler(function(balance) {
-                document.getElementById('absTypePrzysługujący').textContent = balance.przysługujący || 0;
-                document.getElementById('absTypeZaległy').textContent = balance.zaległy || 0;
-                document.getElementById('absTypeWykorzystany').textContent = balance.wykorzystany || 0;
-                document.getElementById('absTypePozostały').textContent = balance.pozostały || 0;
-                
-                // Zapisz do cache
-                userVacationBalances[currentUser.login] = balance;
-                
-                // ✅ NOWE: Wizualnie zablokuj kafelek urlopu jeśli 0 dni
-                updateVacationTileState(balance.pozostały);
-            })
-            .withFailureHandler(function(error) {
-                console.error('Błąd ładowania salda:', error);
-            })
-            .getUserVacationBalance(currentUser.login);
-    }
+  if (!currentUser || !currentUser.login) {
+    console.error('Brak currentUser lub login');
+    document.getElementById('absTypePrzysługujący').textContent = '-';
+    document.getElementById('absTypeZaległy').textContent = '-';
+    document.getElementById('absTypeWykorzystany').textContent = '-';
+    document.getElementById('absTypePozostały').textContent = '-';
+    return;
+  }
+
+  apiVacationBalance(currentUser.login)
+    .then(resp => {
+      const balance = (resp && resp.balance) ? resp.balance : resp;
+      if (!balance) throw new Error('Puste saldo z API');
+
+      document.getElementById('absTypePrzysługujący').textContent = balance.przysługujący || 0;
+      document.getElementById('absTypeZaległy').textContent = balance.zaległy || 0;
+      document.getElementById('absTypeWykorzystany').textContent = balance.wykorzystany || 0;
+      document.getElementById('absTypePozostały').textContent = balance.pozostały || 0;
+
+      // cache (żeby selectAbsenceType nie widział 0)
+      userVacationBalances[currentUser.login] = balance;
+
+      // blokada kafelka, jeśli 0
+      updateVacationTileState(balance.pozostały || 0);
+    })
+    .catch(err => {
+      console.error('Błąd ładowania salda (API):', err);
+      document.getElementById('absTypePrzysługujący').textContent = '-';
+      document.getElementById('absTypeZaległy').textContent = '-';
+      document.getElementById('absTypeWykorzystany').textContent = '-';
+      document.getElementById('absTypePozostały').textContent = '-';
+      updateVacationTileState(0);
+    });
+}
 
     /**
  * Aktualizuje stan kafelka urlopu wypoczynkowego (aktywny/zablokowany)
@@ -9539,6 +9547,7 @@ function updateVacationTileState(pozostalyDni) {
                 // 2) zapis w tle do API
                 apiCreateVacationRequest({
                     login: currentUser.login,
+                    code: currentUser.code,
                     startDate,
                     endDate,
                     comment,
@@ -11669,47 +11678,37 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         }
 
         function loadVacationBalance() {
-            if (typeof google === 'undefined' || !google.script) {
+          if (!currentUser || !currentUser.login) {
+            console.error('Brak currentUser lub login');
+            return;
+          }
+        
+          apiVacationBalance(currentUser.login)
+            .then(resp => {
+              const balance = (resp && resp.balance) ? resp.balance : resp;
+              console.log('Otrzymano saldo z API:', balance);
+        
+              if (balance) {
+                userVacationBalances[currentUser.login] = balance;
+        
+                document.getElementById('urlopPrzysługujący').textContent = balance.przysługujący || 0;
+                document.getElementById('urlopZaległy').textContent = balance.zaległy || 0;
+                document.getElementById('urlopWykorzystany').textContent = balance.wykorzystany || 0;
+                document.getElementById('urlopPozostały').textContent = balance.pozostały || 0;
+        
                 document.getElementById('vacationBalance').style.display = 'block';
-                document.getElementById('urlopPrzysługujący').textContent = '20';
-                document.getElementById('urlopZaległy').textContent = '0';
-                document.getElementById('urlopWykorzystany').textContent = '5';
-                document.getElementById('urlopPozostały').textContent = '15';
-                return;
-            }
-            
-            if (!currentUser || !currentUser.login) {
-                console.error('Brak currentUser lub login');
-                return;
-            }
-            
-            console.log('Ładowanie saldo dla użytkownika:', currentUser.login);
-            
-            google.script.run
-                .withSuccessHandler(function(balance) {
-                    console.log('Otrzymano saldo z serwera:', balance);
-                    
-                    if (balance) {
-                        userVacationBalances[currentUser.login] = balance;
-                        
-                        document.getElementById('urlopPrzysługujący').textContent = balance.przysługujący || 0;
-                        document.getElementById('urlopZaległy').textContent = balance.zaległy || 0;
-                        document.getElementById('urlopWykorzystany').textContent = balance.wykorzystany || 0;
-                        document.getElementById('urlopPozostały').textContent = balance.pozostały || 0;
-                        document.getElementById('vacationBalance').style.display = 'block';
-                        
-                        console.log('Zaktualizowano interfejs saldo urlopowego');
-                        
-                    } else {
-                        console.error('Otrzymano puste saldo');
-                        document.getElementById('vacationBalance').style.display = 'block';
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    console.error('Błąd ładowania saldo:', error);
-                    document.getElementById('vacationBalance').style.display = 'block';
-                })
-                .getUserVacationBalance(currentUser.login);
+                updateVacationTileState(balance.pozostały || 0);
+              } else {
+                console.error('Otrzymano puste saldo');
+                document.getElementById('vacationBalance').style.display = 'block';
+                updateVacationTileState(0);
+              }
+            })
+            .catch(err => {
+              console.error('Błąd ładowania saldo (API):', err);
+              document.getElementById('vacationBalance').style.display = 'block';
+              updateVacationTileState(0);
+            });
         }
 
         function downloadVacationPDF(requestId) {
