@@ -3978,6 +3978,39 @@ async function apiScan(code){
   return data;
 }
 
+    async function apiVacationBalance(login){
+  const r = await fetch(`${API_BASE}/vacations/balance`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiMyVacationRequests(login){
+  const r = await fetch(`${API_BASE}/vacations/my-requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiCreateVacationRequest(payload){
+  const r = await fetch(`${API_BASE}/vacations/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
     let dashSnapshotCache = null;
     let dashDeptFilter = 'ALL';
     let dashShiftFilter = 'ALL';
