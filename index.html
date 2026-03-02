@@ -9531,14 +9531,38 @@ function updateVacationTileState(pozostalyDni) {
                 }
             }
             
-            // Tryb testowy
+            // TRYB API (gdy nie ma google.script)
             if (typeof google === 'undefined' || !google.script) {
-                showNotification('Wniosek złożony (tryb testowy)', 'success');
+                // 1) natychmiast UI jak było
+                showNotification('✅ Wniosek urlopowy złożony! Oczekuje na zatwierdzenie.', 'success');
+            
+                document.getElementById('vacationStartDate').value = '';
+                document.getElementById('vacationEndDate').value = '';
+                document.getElementById('vacationComment').value = '';
+                document.getElementById('vacationInfo').style.display = 'none';
+            
                 setTimeout(() => {
-                    updateManagerNotificationBadge();
                     showView('absenceType');
                     loadAbsenceTypeRequests();
-                }, 2000);
+                }, 500);
+            
+                // 2) zapis w tle do API
+                apiCreateVacationRequest({
+                    login: currentUser.login,
+                    startDate,
+                    endDate,
+                    comment,
+                    vacationType
+                })
+                .then(() => {
+                    // odśwież listę moich wniosków (żeby kolizje działały)
+                    loadUserVacationRequests(currentUser.login);
+                })
+                .catch(err => {
+                    console.error('❌ create vacation API error:', err);
+                    showNotification('❌ Błąd zapisu wniosku: ' + (err?.message || err), 'error');
+                });
+            
                 return;
             }
             
@@ -10014,10 +10038,52 @@ function updateTopBarButton() {
     container.innerHTML = 'Ładowanie wniosków...';
     
     if (typeof google === 'undefined' || !google.script) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">Tryb testowy - brak danych</p>';
-        currentUserVacationRequests = []; // Resetuj w trybie testowym
-        return;
-    }
+    apiMyVacationRequests(login)
+      .then(res => {
+        const requests = res?.requests || [];
+        currentUserVacationRequests = requests;
+
+        if (!requests.length) {
+          container.innerHTML = '<p style="text-align: center; color: #666;">Brak złożonych wniosków</p>';
+          return;
+        }
+
+        let html = '';
+        requests.forEach(request => {
+          const statusColor = getStatusColor(request.status);
+          const typeLabel = getVacationTypeName(request.vacationType || 'planowany');
+          const statusClass = request.status === 'Zatwierdzony' ? 'approved' :
+                             request.status === 'Odrzucony' ? 'rejected' : 'pending';
+
+          html += `
+            <div class="vacation-request-item ${statusClass}">
+              <div style="display: flex; justify-content: space-between;">
+                <div>
+                  <strong>${request.dateFrom} - ${request.dateTo}</strong>
+                  (${request.workingDays} dni)
+                  <span style="background: #e3f2fd; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 10px;">${typeLabel}</span>
+                </div>
+                <div style="color: ${statusColor}; font-weight: bold;">
+                  ${request.status}
+                </div>
+              </div>
+              ${request.commentEmployee ? `<p><em>"${request.commentEmployee}"</em></p>` : ''}
+              <small>Złożony: ${request.dateSubmitted}</small>
+              ${request.commentManager ? `<p style="margin-top: 10px; color: #666; padding: 8px; background: #f8f9fa; border-radius: 4px;"><strong>Komentarz kierownika:</strong> ${request.commentManager}</p>` : ''}
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+      })
+      .catch(err => {
+        console.error('Błąd API (moje wnioski):', err);
+        container.innerHTML = '<p style="color: red;">Błąd ładowania wniosków</p>';
+        currentUserVacationRequests = [];
+      });
+
+    return;
+}
     
     google.script.run
         .withSuccessHandler(function(requests) {
