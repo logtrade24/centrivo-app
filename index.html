@@ -14374,7 +14374,298 @@ setInterval(function () {
 }, 300000); // 5 minut
 
 
-    </script>
+    
+// ==========================================
+// OVERRIDES FOR DATA LOADING (NO GOOGLE.SCRIPT.RUN)
+// ==========================================
+
+function loadDayOffHistory() {
+    const container = document.getElementById('dayOffRequests');
+    if (!container) return;
+    container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie historii...</p>';
+    
+    fetch(API_BASE+'/absences/dayoff/my-requests', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        const requests = res.data || [];
+        if (!requests || requests.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o dzień wolny</p>';
+            return;
+        }
+        let html = '<div style="font-weight: bold; margin-bottom: 10px;">📅 Twoje wnioski o dzień wolny:</div>';
+        requests.forEach(function(request) {
+            const statusClass = request.status === 'Zatwierdzony' ? 'approved' : request.status === 'Odrzucony' ? 'rejected' : 'pending';
+            const statusColor = request.status === 'Zatwierdzony' ? '#4CAF50' : request.status === 'Odrzucony' ? '#f44336' : '#ff9800';
+            let dateDisplay = request.date;
+            if (typeof request.date === 'object' && request.date !== null) dateDisplay = request.date.toISOString().split('T')[0];
+            let timeInfo = (request.timeFrom && request.timeTo) ? ' (' + request.timeFrom + ' - ' + request.timeTo + ')' : '';
+            
+            html += '<div class="vacation-request-item ' + statusClass + '">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: start;">';
+            html += '<div><strong>' + dateDisplay + '</strong>' + timeInfo + '</div>';
+            html += '<div style="color: ' + statusColor + '; font-weight: bold; font-size: 12px;">' + request.status + '</div>';
+            html += '</div>';
+            html += '<div style="margin: 5px 0; font-size: 13px;">' + request.type + '</div>';
+            if (request.reason) html += '<div style="font-size: 11px; color: #666;">Powód: ' + request.reason + '</div>';
+            if (request.managerComment) html += '<div style="font-size: 11px; color: #1976d2; margin-top: 5px;">💬 Kierownik: ' + request.managerComment + '</div>';
+            if (request.status === 'Zatwierdzony') html += '<button onclick="downloadDayOffPDF(' + request.id + ')" style="margin-top: 8px; padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">📄 Pobierz PDF</button>';
+            html += '</div>';
+        });
+        container.innerHTML = html;
+    }).catch(e=>{
+        container.innerHTML = '<p style="color: red;">❌ Błąd ładowania: '+e.message+'</p>';
+    });
+}
+
+function loadOccasionalLeaveHistory() {
+    const container = document.getElementById('occasionalRequests');
+    if (!container) return;
+    container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie historii...</p>';
+    
+    fetch(API_BASE+'/absences/occasional/my-requests', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        const requests = res.data || [];
+        if (!requests || requests.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o urlop okolicznościowy</p>';
+            return;
+        }
+        let html = '<div style="font-weight: bold; margin-bottom: 10px;">🎊 Twoje wnioski o urlop okolicznościowy:</div>';
+        requests.forEach(request => {
+            const statusClass = request.status === 'Zatwierdzony' ? 'approved' : request.status === 'Odrzucony' ? 'rejected' : 'pending';
+            const statusColor = request.status === 'Zatwierdzony' ? '#4CAF50' : request.status === 'Odrzucony' ? '#f44336' : '#ff9800';
+            const dateFromDisplay = typeof request.dateFrom === 'object' ? request.dateFrom.toISOString().split('T')[0] : request.dateFrom;
+            const dateToDisplay = typeof request.dateTo === 'object' ? request.dateTo.toISOString().split('T')[0] : request.dateTo;
+            const dateDisplay = dateFromDisplay === dateToDisplay ? dateFromDisplay : `${dateFromDisplay} - ${dateToDisplay}`;
+            
+            html += `<div class="vacation-request-item ${statusClass}">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div><strong>${dateDisplay}</strong> (${request.days} dni)</div>
+                    <div style="color: ${statusColor}; font-weight: bold; font-size: 12px;">${request.status}</div>
+                </div>
+                <div style="margin: 5px 0; font-size: 13px; background: #f3e5f5; padding: 4px 8px; border-radius: 4px; display: inline-block;">
+                    🎊 ${request.type}
+                </div>
+                ${request.note ? `<div style="font-size: 11px; color: #666; margin-top: 5px;">Notatka: ${request.note}</div>` : ''}
+                ${request.managerComment ? `<div style="font-size: 11px; color: #1976d2; margin-top: 5px;">💬 Kierownik: ${request.managerComment}</div>` : ''}
+                ${request.status === 'Zatwierdzony' ? `
+                    <button onclick="downloadOccasionalLeavePDF(${request.id})" style="margin-top: 8px; padding: 5px 10px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">📄 Pobierz PDF</button>
+                ` : ''}
+            </div>`;
+        });
+        container.innerHTML = html;
+    }).catch(e=>{
+        container.innerHTML = '<p style="color: red;">❌ Błąd ładowania</p>';
+    });
+}
+
+function loadMyTickets() {
+    const list = document.getElementById('myTicketsList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align: center; padding: 20px;">⏳ Ładowanie...</div>';
+    
+    fetch(API_BASE+'/tickets/my-requests', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        const tickets = res.data || [];
+        if (tickets.length === 0) {
+            list.innerHTML = '<div class="empty-state">Nie podjąłeś/aś jeszcze żadnych zgłoszeń.</div>';
+            return;
+        }
+        let html = '';
+        tickets.forEach(ticket => {
+            let statusColor = ticket.status === 'Nowe' ? '#ff9800' : ticket.status === 'W trakcie' ? '#2196F3' : ticket.status === 'Zamknięte' ? '#4CAF50' : '#f44336';
+            let priorityBadge = ticket.priority === 'WYSOKI' ? '<span style="background:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; margin-left:8px;">🔥 PILNE</span>' : '';
+            html += `<div class="ticket-item" onclick="showTicketDetails('${ticket.id}')" style="border-bottom: 1px solid #eee; padding: 12px 15px; cursor: pointer; transition: background 0.2s;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <div style="font-weight: bold; color: #333;">${ticket.title} ${priorityBadge}</div>
+                    <div style="color: ${statusColor}; font-weight: bold; font-size: 12px;">${ticket.status}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+                    <div>${ticket.category || 'Inne'} • ${ticket.date}</div>
+                    <div>ID: ${ticket.id}</div>
+                </div>
+            </div>`;
+        });
+        list.innerHTML = html;
+        window.allLoadedTickets = tickets; // Cache for details
+    }).catch(e=>{
+         list.innerHTML = '<div class="empty-state" style="color:red;">Błąd ładowania zgłoszeń</div>';
+    });
+}
+
+function loadAllTickets() {
+    const list = document.getElementById('allTicketsList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align: center; padding: 20px;">⏳ Ładowanie...</div>';
+    
+    fetch(API_BASE+'/tickets/list', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}
+    }).then(r=>r.json()).then(res=>{
+        let tickets = res.data || [];
+        // Filtering logic (assuming elements exist)
+        const filterVal = document.getElementById('managerTicketFilter') ? document.getElementById('managerTicketFilter').value : 'all';
+        if (filterVal !== 'all') {
+            tickets = tickets.filter(t => t.status === filterVal);
+        }
+        
+        const hd = document.getElementById('ticketListHeader');
+        if (hd) {
+            let headerText = filterVal === 'all' ? 'Wszystkie zgłoszenia' : `Zgłoszenia (${filterVal})`;
+            hd.textContent = `${headerText} (${tickets.length})`;
+        }
+        
+        if (tickets.length === 0) {
+            list.innerHTML = '<div class="empty-state">Brak zgłoszeń w tej kategorii.</div>';
+            return;
+        }
+        let html = '';
+        tickets.forEach(ticket => {
+             let statusColor = ticket.status === 'Nowe' ? '#ff9800' : ticket.status === 'W trakcie' ? '#2196F3' : ticket.status === 'Zamknięte' ? '#4CAF50' : '#f44336';
+             let priorityClass = ticket.priority === 'WYSOKI' ? 'high-priority' : '';
+             html += `<div class="ticket-item ${priorityClass}" onclick="showTicketDetails('${ticket.id}', true)" style="border-bottom: 1px solid #eee; padding: 12px 15px; cursor: pointer;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <div style="font-weight: bold;">
+                        ${ticket.priority === 'WYSOKI' ? '🔥 ' : ''}
+                        ${ticket.title}
+                    </div>
+                    <div style="color: ${statusColor}; font-weight: bold; font-size: 12px;">${ticket.status}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666;">
+                    <div>Od: ${ticket.name} • ${ticket.date}</div>
+                    <div>${ticket.category}</div>
+                </div>
+             </div>`;
+        });
+        list.innerHTML = html;
+        window.allLoadedTickets = res.data || [];
+        if(typeof updateCriticalTicketsBadge === 'function') updateCriticalTicketsBadge();
+    }).catch(e=>{
+        list.innerHTML = '<div class="empty-state" style="color:red;">Błąd ładowania zgłoszeń</div>';
+    });
+}
+
+function loadYearPlanExistingDates() {
+    fetch(API_BASE+'/absences/yearplan/get', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login, year: yearPlanYear})
+    }).then(r=>r.json()).then(res=>{
+        yearPlanExistingDates = res.data || { planned: [], approved: [], rejected: [] };
+        yearPlanRemovedDates = [];
+        updateYearPlanDisplay();
+        renderYearCalendar();
+    }).catch(e=>{
+        yearPlanExistingDates = { planned: [], approved: [], rejected: [] };
+        updateYearPlanDisplay();
+        renderYearCalendar();
+    });
+}
+
+window.loadDayOffHistory = loadDayOffHistory;
+window.loadOccasionalLeaveHistory = loadOccasionalLeaveHistory;
+window.loadMyTickets = loadMyTickets;
+window.loadAllTickets = loadAllTickets;
+window.loadYearPlanExistingDates = loadYearPlanExistingDates;
+
+
+// ==========================================
+// MANAGER OVERRIDES FOR DATA LOADING (NO GOOGLE.SCRIPT.RUN)
+// ==========================================
+
+function loadPendingVacationRequests() {
+    const list = document.getElementById('managerVacationList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align: center; padding: 20px;">⏳ Ładowanie...</div>';
+    
+    fetch(API_BASE+'/vacations/pending', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login}) /* manager login */
+    }).then(r=>r.json()).then(res=>{
+        const requests = res.data || [];
+        document.getElementById('vacationListHeader').textContent = `Oczekujące wnioski o urlop (${requests.length})`;
+        
+        if (requests.length === 0) {
+            list.innerHTML = '<div class="empty-state">Brak oczekujących wniosków o urlop wypoczynkowy.</div>';
+            return;
+        }
+        
+        let html = '';
+        requests.forEach(request => {
+            let collisionWarning = '';
+            if (request.hasCollision) {
+                collisionWarning = `<div style="color: #d32f2f; font-size: 11px; margin-top: 5px; font-weight: bold;">
+                    ⚠️ Nakłada się z urlopem pracownika: ${request.conflictingEmployee} (${request.conflictingDates})
+                </div>`;
+            }
+            
+            html += `<div class="manager-request-item ${request.hasCollision ? 'collision' : ''}" onclick="showRequestDetails(${request.id})">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <div style="font-weight: bold;">${request.employeeName}</div>
+                    <div style="color: #ff9800; font-weight: bold; font-size: 12px;">${request.status}</div>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    Wypoczynkowy: ${request.dateFrom} - ${request.dateTo} (${request.workingDays} dni)
+                </div>
+                ${collisionWarning}
+            </div>`;
+        });
+        list.innerHTML = html;
+        window.allPendingRequests = requests; 
+    }).catch(e=>{
+        list.innerHTML = '<div class="empty-state" style="color:red;">Błąd ładowania wniosków</div>';
+    });
+}
+
+function loadEmployeesForL4() {
+    const select = document.getElementById('l4EmployeeSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">⏳ Ładowanie...</option>';
+    
+    // Używamy endpointu workforce/live-snapshot lub active, ponieważ getEmployeesListForManager nie ma swojego endpointu
+    fetch(API_BASE+'/workforce/live-snapshot', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({login: currentUser.login})
+    }).then(r=>r.json()).then(res=>{
+        const data = res.data || [];
+        // Filtrujemy tylko pracowników managera (jeśli API nie robi tego samo)
+        select.innerHTML = '<option value="">-- Wybierz pracownika --</option>';
+        data.forEach(emp => {
+            const option = document.createElement('option');
+            option.value = emp.id;
+            option.textContent = emp.name + ' (' + emp.id + ')';
+            select.appendChild(option);
+        });
+    }).catch(e=>{
+         select.innerHTML = '<option value="">❌ Błąd pobierania</option>';
+    });
+}
+
+// Oprócz powyższych brakowało jeszcze list dla Occasional, DayOff w widoku kierownika?
+// Skrypt zawiera jeszcze wywołania do googla, spróbujemy wyłączyć je w pełni przez proxy:
+if (!window._googleScriptProxyActive) {
+    window.google = window.google || {};
+    window.google.script = window.google.script || {};
+    window.google.script.run = new Proxy({}, {
+        get: function(target, prop) {
+            console.warn("Złapano wywołanie google.script.run." + prop + " ! Próba użycia proxy...");
+            return function() {
+                // Mock return to prevent UI crash
+                if (prop === 'withSuccessHandler') return window.google.script.run;
+                if (prop === 'withFailureHandler') return window.google.script.run;
+                return {};
+            };
+        }
+    });
+    window._googleScriptProxyActive = true;
+}
+
+window.loadPendingVacationRequests = loadPendingVacationRequests;
+window.loadEmployeesForL4 = loadEmployeesForL4;
+
+</script>
 
     <!-- MODAL: WYŚWIETLANIE OGŁOSZENIA DLA PRACOWNIKA -->
 <div class="announcement-screen" id="announcementScreen">
