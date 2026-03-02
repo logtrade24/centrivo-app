@@ -3979,10 +3979,11 @@ async function apiScan(code){
 }
 
     async function apiVacationBalance(login){
+  const code = (currentUser && currentUser.code) ? String(currentUser.code).trim() : "";
   const r = await fetch(`${API_BASE}/vacations/balance`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login })
+    body: JSON.stringify({ login, code })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
@@ -3990,10 +3991,11 @@ async function apiScan(code){
 }
 
 async function apiMyVacationRequests(login){
+  const code = (currentUser && currentUser.code) ? String(currentUser.code).trim() : "";
   const r = await fetch(`${API_BASE}/vacations/my-requests`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login })
+    body: JSON.stringify({ login, code })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
