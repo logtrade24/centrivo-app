@@ -14016,53 +14016,26 @@ async function loadEmployeesForL4() {
       return;
     }
 
-    // bierzemy tę samą listę co w ogłoszeniach (działa po API)
+    // Ta sama lista co w ogłoszeniach
     const employees = await apiGetEmployeesForRecipients(login);
-
-    sel.innerHTML = '<option value="">-- Wybierz pracownika --</option>' +
-      (employees || []).map(e =>
-        `<option value="${String(e.login || '').trim()}">${String(e.name || '').trim()} (${String(e.login || '').trim()})</option>`
-      ).join('');
 
     if (!employees || employees.length === 0) {
       sel.innerHTML = '<option value="">Brak pracowników</option>';
+      return;
     }
+
+    sel.innerHTML =
+      '<option value="">-- Wybierz pracownika --</option>' +
+      employees.map(e => {
+        const l = String(e.login || '').trim();
+        const n = String(e.name || '').trim();
+        return `<option value="${l}">${n} (${l})</option>`;
+      }).join('');
+
   } catch (e) {
     console.error('loadEmployeesForL4 error:', e);
     sel.innerHTML = '<option value="">❌ Błąd ładowania listy</option>';
   }
-}
-    
-    // Załaduj z arkusza
-    google.script.run
-        .withSuccessHandler(function(employees) {
-            console.log('✅ Otrzymano pracowników z backendu:', employees);
-            console.log('Liczba pracowników:', employees.length);
-            
-            select.innerHTML = '<option value="">-- Wybierz pracownika --</option>';
-            
-            if (!employees || employees.length === 0) {
-                select.innerHTML = '<option value="">Brak pracowników w arkuszu</option>';
-                showNotification('⚠️ Brak pracowników w arkuszu', 'error');
-                return;
-            }
-            
-            employees.forEach(emp => {
-                console.log('Dodaję pracownika:', emp);
-                const option = document.createElement('option');
-                option.value = emp.login;
-                option.textContent = `${emp.firstName} ${emp.lastName} (${emp.login})`;
-                select.appendChild(option);
-            });
-            
-            showNotification(`✅ Załadowano ${employees.length} pracowników`, 'success');
-        })
-        .withFailureHandler(function(error) {
-            console.error('❌ Błąd ładowania pracowników:', error);
-            select.innerHTML = '<option value="">Błąd ładowania pracowników</option>';
-            showNotification('❌ Błąd ładowania pracowników: ' + error.message, 'error');
-        })
-        .getAllEmployees();
 }
 
                   /**
