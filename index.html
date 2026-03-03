@@ -8528,7 +8528,15 @@ function updateVacationTileState(pozostalyDni) {
             // ✅ TRYB API (Cloudflare Pages)
 (async () => {
   try {
-    const code = (sessionStorage.getItem('currentEmployeeCode') || '').trim();
+    const code = String(
+  sessionStorage.getItem('currentEmployeeCode') ||
+  (currentUser && currentUser.code) ||
+  ''
+).trim();
+
+if (code && !sessionStorage.getItem('currentEmployeeCode')) {
+  sessionStorage.setItem('currentEmployeeCode', code);
+}
     if (!code) {
       showNotification('❌ Brak kodu pracownika – zeskanuj identyfikator', 'error');
       return;
@@ -8749,7 +8757,15 @@ return;
           // ✅ TRYB API (Cloudflare Pages)
 (async () => {
   try {
-    const code = (sessionStorage.getItem('currentEmployeeCode') || '').trim();
+    const code = String(
+  sessionStorage.getItem('currentEmployeeCode') ||
+  (currentUser && currentUser.code) ||
+  ''
+).trim();
+
+if (code && !sessionStorage.getItem('currentEmployeeCode')) {
+  sessionStorage.setItem('currentEmployeeCode', code);
+}
     if (!code) {
       showNotification('❌ Brak kodu pracownika – zeskanuj identyfikator', 'error');
       return;
