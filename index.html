@@ -8525,41 +8525,39 @@ function updateVacationTileState(pozostalyDni) {
             
             console.log('Wysyłam wniosek o dzień wolny:', dayOffData);
             
-            // Sprawdź czy backend dostępny
-            if (typeof google === 'undefined' || !google.script) {
-                showNotification('✅ Wniosek złożony (tryb testowy)', 'success');
-                setTimeout(() => {
-                    showView('absenceType');
-                }, 2000);
-                return;
-            }
-            
-            // Pokaż ładowanie
-            showNotification('⏳ Wysyłam wniosek...', 'info');
-            
-            // 1. NATYCHMIAST - pokaż sukces
+            // ✅ TRYB API (Cloudflare Pages)
+(async () => {
+  try {
+    const code = (sessionStorage.getItem('currentEmployeeCode') || '').trim();
+    if (!code) {
+      showNotification('❌ Brak kodu pracownika – zeskanuj identyfikator', 'error');
+      return;
+    }
+
+    showNotification('⏳ Wysyłam wniosek...', 'info');
+
+    const r = await fetch(`${API_BASE}/absences/dayoff/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...dayOffData, code })
+    });
+
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data?.success) throw new Error(data?.message || `HTTP ${r.status}`);
+
     showNotification('✅ Wniosek o dzień wolny złożony!', 'success');
-    
-    // 2. NATYCHMIAST - wróć do wyboru typu
+
     setTimeout(() => {
-        updateManagerNotificationBadge();
-        showView('absenceType');
+      if (typeof updateManagerNotificationBadge === 'function') updateManagerNotificationBadge();
+      showView('absenceType');
     }, 500);
-    
-    // 3. W TLE - zapisz do backendu
-    google.script.run
-        .withSuccessHandler(function(result) {
-            if (result && result.success) {
-                console.log('✅ Dzień wolny zapisany');
-            } else {
-                showNotification('⚠️ ' + (result ? result.message : 'Błąd zapisu'), 'error');
-            }
-        })
-        .withFailureHandler(function(error) {
-            console.error('Błąd submitDayOff:', error);
-            showNotification('⚠️ Błąd połączenia', 'error');
-        })
-        .submitDayOffRequest(dayOffData);
+
+  } catch (e) {
+    console.error('submitDayOff API error:', e);
+    showNotification('⚠️ ' + (e.message || 'Błąd zapisu'), 'error');
+  }
+})();
+return;
 };
 
         /**
@@ -8748,36 +8746,43 @@ function updateVacationTileState(pozostalyDni) {
 
           console.log('Wysyłam wniosek o urlop okolicznościowy:', occasionalData);
 
-          if (typeof google === 'undefined' || !google.script) {
-            showNotification('✅ Wniosek złożony (tryb testowy)', 'success');
-            setTimeout(() => {
-              showView('absenceType');
-            }, 2000);
-            return;
-          }
+          // ✅ TRYB API (Cloudflare Pages)
+(async () => {
+  try {
+    const code = (sessionStorage.getItem('currentEmployeeCode') || '').trim();
+    if (!code) {
+      showNotification('❌ Brak kodu pracownika – zeskanuj identyfikator', 'error');
+      return;
+    }
 
-          showNotification('✅ Wniosek o urlop okolicznościowy złożony!', 'success');
+    showNotification('⏳ Wysyłam wniosek...', 'info');
 
-          setTimeout(() => {
-            updateManagerNotificationBadge();
-            showView('absenceType');
-          }, 500);
+    const r = await fetch(`${API_BASE}/absences/occasional/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...occasionalData, code })
+    });
 
-          google.script.run
-            .withSuccessHandler(function(result) {
-              if (result && result.success) {
-                console.log('✅ Urlop okolicznościowy zapisany');
-              } else {
-                showNotification('⚠️ ' + (result ? result.message : 'Błąd zapisu'), 'error');
-              }
-            })
-            .withFailureHandler(function(error) {
-              console.error('Błąd submitOccasionalLeave:', error);
-              showNotification('⚠️ Błąd połączenia', 'error');
-            })
-            .submitOccasionalLeaveRequest(occasionalData);
-        };
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data?.success) throw new Error(data?.message || `HTTP ${r.status}`);
 
+    showNotification('✅ Wniosek o urlop okolicznościowy złożony!', 'success');
+
+    setTimeout(() => {
+      if (typeof updateManagerNotificationBadge === 'function') updateManagerNotificationBadge();
+      showView('absenceType');
+    }, 500);
+
+    // odśwież historię jeśli widok otwarty
+    if (typeof loadOccasionalLeaveHistory === 'function') loadOccasionalLeaveHistory();
+
+  } catch (e) {
+    console.error('submitOccasionalLeave API error:', e);
+    showNotification('⚠️ ' + (e.message || 'Błąd zapisu'), 'error');
+  }
+})();
+return;
+};
         /**
          * Pomocnicza funkcja - nazwa typu urlopu okolicznościowego
          */
