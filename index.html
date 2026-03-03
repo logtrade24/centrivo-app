@@ -14003,19 +14003,35 @@ function showL4Form() {
 /**
  * Ładuje listę pracowników do dropdown
  */
-function loadEmployeesForL4() {
-    const select = document.getElementById('l4EmployeeSelect');
-    select.innerHTML = '<option value="">Ładowanie pracowników...</option>';
-    
-    if (typeof google === 'undefined' || !google.script) {
-        // Tryb testowy
-        select.innerHTML = `
-            <option value="">-- Wybierz pracownika --</option>
-            <option value="rafalk5">Rafał test (rafalk5)</option>
-            <option value="vadyma">Vadym A. (vadyma)</option>
-        `;
-        return;
+async function loadEmployeesForL4() {
+  const sel = document.getElementById('l4EmployeeSelect');
+  if (!sel) return;
+
+  sel.innerHTML = '<option value="">⏳ Ładuję...</option>';
+
+  try {
+    const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+    if (!login) {
+      sel.innerHTML = '<option value="">❌ Brak loginu (zaloguj się ponownie)</option>';
+      return;
     }
+
+    // bierzemy tę samą listę co w ogłoszeniach (działa po API)
+    const employees = await apiGetEmployeesForRecipients(login);
+
+    sel.innerHTML = '<option value="">-- Wybierz pracownika --</option>' +
+      (employees || []).map(e =>
+        `<option value="${String(e.login || '').trim()}">${String(e.name || '').trim()} (${String(e.login || '').trim()})</option>`
+      ).join('');
+
+    if (!employees || employees.length === 0) {
+      sel.innerHTML = '<option value="">Brak pracowników</option>';
+    }
+  } catch (e) {
+    console.error('loadEmployeesForL4 error:', e);
+    sel.innerHTML = '<option value="">❌ Błąd ładowania listy</option>';
+  }
+}
     
     // Załaduj z arkusza
     google.script.run
