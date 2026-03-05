@@ -4013,6 +4013,193 @@ async function apiCreateVacationRequest(payload){
   return data;
 }
 
+async function apiProcessVacation(login, requestId, decision, comment) {
+  const r = await fetch(`${API_BASE}/vacations/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, requestId, decision, comment })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetPendingVacations(login) {
+  const r = await fetch(`${API_BASE}/vacations/pending`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetDayOffRequests(login) {
+  const r = await fetch(`${API_BASE}/absences/dayoff/my`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetOccasionalLeaveRequests(login) {
+  const r = await fetch(`${API_BASE}/absences/occasional/my`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetYearPlanCalendar(login, year) {
+  const r = await fetch(`${API_BASE}/vacations/year-plan/calendar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, year })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiSubmitYearPlan(planData) {
+  const r = await fetch(`${API_BASE}/vacations/year-plan/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(planData || {})
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetPendingDayOff(login) {
+  const r = await fetch(`${API_BASE}/absences/dayoff/pending`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetPendingOccasional(login) {
+  const r = await fetch(`${API_BASE}/absences/occasional/pending`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetPendingYearPlan(login) {
+  const r = await fetch(`${API_BASE}/vacations/year-plan/pending`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiProcessYearPlanWithDates(login, requestId, decision, comment, selectedDates) {
+  const r = await fetch(`${API_BASE}/vacations/year-plan/process-dates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, requestId, decision, comment, selectedDates })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiProcessDayOff(login, requestId, decision, comment) {
+  const r = await fetch(`${API_BASE}/absences/dayoff/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, requestId, decision, comment })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiProcessOccasional(login, requestId, decision, comment) {
+  const r = await fetch(`${API_BASE}/absences/occasional/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, requestId, decision, comment })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiProcessYearPlan(login, requestId, decision, comment) {
+  const r = await fetch(`${API_BASE}/vacations/year-plan/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, requestId, decision, comment })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetAbsenceCounts(login) {
+  const r = await fetch(`${API_BASE}/vacations/pending-counts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetPendingAbsenceCount(login) {
+  const r = await fetch(`${API_BASE}/vacations/pending-count`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiGetAllAbsenceHistory(login) {
+  const r = await fetch(`${API_BASE}/vacations/my-all`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
+async function apiRegisterL4(login, employeeLogin, startDate, endDate, l4Type, note) {
+  const r = await fetch(`${API_BASE}/absences/l4/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login, employeeLogin, startDate, endDate, l4Type, note })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
+  return data;
+}
+
     let dashSnapshotCache = null;
     let dashDeptFilter = 'ALL';
     let dashShiftFilter = 'ALL';
@@ -8084,40 +8271,36 @@ function updateVacationTileState(pozostalyDni) {
             function loadAbsenceTypeRequests() {
                 const container = document.getElementById('absenceTypeRequests');
                 container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie historii wniosków...</p>';
-                
-                if (typeof google === 'undefined' || !google.script) {
-                    container.innerHTML = '<p style="text-align: center; color: #666;">Tryb testowy - brak połączenia z backendem</p>';
-                    return;
-                }
-                
-                google.script.run
-                    .withSuccessHandler(function(requests) {
+
+                apiGetAllAbsenceHistory(currentUser.login)
+                    .then(function(data) {
+                        const requests = data?.requests || [];
                         if (!requests || requests.length === 0) {
                             container.innerHTML = '<p style="text-align: center; color: #666;">Brak złożonych wniosków</p>';
                             return;
                         }
-                        
+
                         // Pokaż ostatnie 10 wniosków (wszystkich typów)
                         const recentRequests = requests.slice(0, 10);
-                        
+
                         let html = '<div class="vacation-last-title">📋 Ostatnie wnioski:</div>';
-                        
+
                         recentRequests.forEach(request => {
                             const statusColor = getStatusColor(request.status);
-                            const statusClass = request.status === 'Zatwierdzony' ? 'approved' : 
+                            const statusClass = request.status === 'Zatwierdzony' ? 'approved' :
                                               request.status === 'Odrzucony' ? 'rejected' : 'pending';
-                            
+
                             // Formatowanie daty
                             let dateDisplay = request.dateFrom;
                             if (request.dateFrom !== request.dateTo && request.type !== 'yearplan') {
                                 dateDisplay = request.dateFrom + ' - ' + request.dateTo;
                             }
-                            
+
                             // Dla planu rocznego pokaż rok
                             if (request.type === 'yearplan') {
                                 dateDisplay = request.details;
                             }
-                            
+
                             html += `
                                 <div class="vacation-request-item ${statusClass}" style="border-left: 4px solid ${getTypeColor(request.type)};">
                                     <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -8130,7 +8313,7 @@ function updateVacationTileState(pozostalyDni) {
                                         </div>
                                     </div>
                                     <div style="margin: 5px 0;">
-                                        <strong>${dateDisplay}</strong> 
+                                        <strong>${dateDisplay}</strong>
                                         ${request.days ? '(' + request.days + ' dni)' : ''}
                                     </div>
                                    <div style="font-size: 11px; color: #666;">
@@ -8139,20 +8322,19 @@ function updateVacationTileState(pozostalyDni) {
                                 </div>
                             `;
                         });
-                        
+
                         if (requests.length > 10) {
                             html += `<p style="text-align: center; color: #666; margin-top: 10px;">
                                 ... i ${requests.length - 10} więcej wniosków
                             </p>`;
                         }
-                        
+
                         container.innerHTML = html;
                     })
-                    .withFailureHandler(function(error) {
+                    .catch(function(error) {
                         console.error('Błąd ładowania historii:', error);
                         container.innerHTML = '<p style="color: red;">❌ Błąd ładowania wniosków</p>';
-                    })
-                    .getUserAllAbsenceHistory(currentUser.login);
+                    });
             }
 
             /**
@@ -8185,76 +8367,70 @@ function updateVacationTileState(pozostalyDni) {
                 }
                 
                 container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie historii...</p>';
-                
-                if (typeof google === 'undefined' || !google.script) {
-                    console.log('⚠️ Tryb testowy - brak google.script');
-                    container.innerHTML = '<p style="text-align: center; color: #666;">Tryb testowy</p>';
-                    return;
-                }
-                
+
                 console.log('🔵 Wywołuję getDayOffRequests dla:', currentUser.login);
-                
-                google.script.run
-                    .withSuccessHandler(function(requests) {
+
+                apiGetDayOffRequests(currentUser.login)
+                    .then(function(data) {
+                        const requests = data?.requests || [];
                         console.log('✅ getDayOffRequests - odpowiedź:', requests);
                         console.log('✅ Liczba wniosków:', requests ? requests.length : 'NULL');
-                        
+
                         if (!requests || requests.length === 0) {
                             container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o dzień wolny</p>';
                             return;
                         }
-                        
+
                         let html = '<div style="font-weight: bold; margin-bottom: 10px;">📅 Twoje wnioski o dzień wolny:</div>';
-                        
+
                         requests.forEach(function(request, index) {
                             console.log('🔵 Przetwarzam wniosek #' + index + ':', request);
-                            
+
                             const statusColor = getStatusColor(request.status);
-                            const statusClass = request.status === 'Zatwierdzony' ? 'approved' : 
+                            const statusClass = request.status === 'Zatwierdzony' ? 'approved' :
                                               request.status === 'Odrzucony' ? 'rejected' : 'pending';
-                            
+
                             // Formatuj datę
                             let dateDisplay = request.date;
                             if (typeof request.date === 'object' && request.date !== null) {
                                 dateDisplay = request.date.toISOString().split('T')[0];
                             }
-                            
+
                             // Godziny (jeśli wyjście prywatne)
                             let timeInfo = '';
                             if (request.timeFrom && request.timeTo) {
                                 timeInfo = ' (' + request.timeFrom + ' - ' + request.timeTo + ')';
                             }
-                            
+
                             html += '<div class="vacation-request-item ' + statusClass + '">';
                             html += '<div style="display: flex; justify-content: space-between; align-items: start;">';
                             html += '<div><strong>' + dateDisplay + '</strong>' + timeInfo + '</div>';
                             html += '<div style="color: ' + statusColor + '; font-weight: bold; font-size: 12px;">' + request.status + '</div>';
                             html += '</div>';
                             html += '<div style="margin: 5px 0; font-size: 13px;">' + request.type + '</div>';
-                            
+
                             if (request.reason) {
                                 html += '<div style="font-size: 11px; color: #666;">Powód: ' + request.reason + '</div>';
                             }
                             if (request.managerComment) {
                                 html += '<div style="font-size: 11px; color: #1976d2; margin-top: 5px;">💬 Kierownik: ' + request.managerComment + '</div>';
                             }
-                            
+
                             if (request.status === 'Zatwierdzony') {
                                 html += '<button onclick="downloadDayOffPDF(' + request.id + ')" style="margin-top: 8px; padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">📄 Pobierz PDF</button>';
                             }
-                            
+
                             html += '</div>';
                         });
-                        
+
                         console.log('🔵 Ustawiam HTML...');
                         container.innerHTML = html;
                         console.log('✅ Historia załadowana!');
                     })
-                    .withFailureHandler(function(error) {
+                    .catch(function(error) {
                         console.error('❌ Błąd getDayOffRequests:', error);
                         container.innerHTML = '<p style="color: red;">❌ Błąd ładowania: ' + error.message + '</p>';
-                    })
-                    .getDayOffRequests(currentUser.login);
+                    });
             }
 
           /**
@@ -8265,35 +8441,30 @@ function updateVacationTileState(pozostalyDni) {
               if (!container) return;
               
               container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie historii...</p>';
-              
-              if (typeof google === 'undefined' || !google.script) {
-                  container.innerHTML = '<p style="text-align: center; color: #666;">Tryb testowy</p>';
-                  return;
-              }
-              
-              google.script.run
-                  .withSuccessHandler(function(requests) {
+
+              apiGetOccasionalLeaveRequests(currentUser.login)
+                  .then(function(data) {
+                      const requests = data?.requests || [];
                       if (!requests || requests.length === 0) {
                           container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o urlop okolicznościowy</p>';
                           return;
                       }
-                      
+
                       let html = '<div style="font-weight: bold; margin-bottom: 10px;">🎊 Twoje wnioski o urlop okolicznościowy:</div>';
-                      
+
                       requests.forEach(request => {
                           const statusColor = getStatusColor(request.status);
-                          const statusClass = request.status === 'Zatwierdzony' ? 'approved' : 
+                          const statusClass = request.status === 'Zatwierdzony' ? 'approved' :
                                             request.status === 'Odrzucony' ? 'rejected' : 'pending';
-                          
-                          // Formatuj daty
-                          const dateFromDisplay = typeof request.dateFrom === 'object' ? 
+
+                          const dateFromDisplay = typeof request.dateFrom === 'object' ?
                               request.dateFrom.toISOString().split('T')[0] : request.dateFrom;
-                          const dateToDisplay = typeof request.dateTo === 'object' ? 
+                          const dateToDisplay = typeof request.dateTo === 'object' ?
                               request.dateTo.toISOString().split('T')[0] : request.dateTo;
-                          
-                          const dateDisplay = dateFromDisplay === dateToDisplay ? 
+
+                          const dateDisplay = dateFromDisplay === dateToDisplay ?
                               dateFromDisplay : `${dateFromDisplay} - ${dateToDisplay}`;
-                          
+
                           html += `
                               <div class="vacation-request-item ${statusClass}">
                                   <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -8309,9 +8480,9 @@ function updateVacationTileState(pozostalyDni) {
                                   </div>
                                   ${request.note ? `<div style="font-size: 11px; color: #666; margin-top: 5px;">Notatka: ${request.note}</div>` : ''}
                                   ${request.managerComment ? `<div style="font-size: 11px; color: #1976d2; margin-top: 5px;">💬 Kierownik: ${request.managerComment}</div>` : ''}
-                                  
+
                                   ${request.status === 'Zatwierdzony' ? `
-                                      <button onclick="downloadOccasionalLeavePDF(${request.id})" 
+                                      <button onclick="downloadOccasionalLeavePDF(${request.id})"
                                               style="margin-top: 8px; padding: 5px 10px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                           📄 Pobierz PDF
                                       </button>
@@ -8319,14 +8490,13 @@ function updateVacationTileState(pozostalyDni) {
                               </div>
                           `;
                       });
-                      
+
                       container.innerHTML = html;
                   })
-                  .withFailureHandler(function(error) {
+                  .catch(function(error) {
                       console.error('Błąd:', error);
                       container.innerHTML = '<p style="color: red;">❌ Błąd ładowania</p>';
-                  })
-                  .getOccasionalLeaveRequests(currentUser.login);
+                  });
           }
 
        /**
@@ -8872,26 +9042,21 @@ return;
          */
         function loadYearPlanExistingDates() {
             console.log('🔵 Ładuję istniejące plany dla:', currentUser.login, 'rok:', yearPlanYear);
-            
-            if (typeof google === 'undefined' || !google.script) {
-                // Tryb testowy - bez backendu
-                yearPlanExistingDates = { planned: [], approved: [], rejected: [] };
-                updateYearPlanDisplay();
-                renderYearCalendar();
-                showNotification('Kliknij na dni aby zaplanować urlop', 'info');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
+
+            apiGetYearPlanCalendar(currentUser.login, yearPlanYear)
+                .then(function(result) {
                     console.log('✅ Otrzymano istniejące plany:', result);
-                    yearPlanExistingDates = result || { planned: [], approved: [], rejected: [] };
-                    yearPlanRemovedDates = [];  // Resetuj usunięte przy ładowaniu
+                    yearPlanExistingDates = {
+                        planned:  result?.planned  || [],
+                        approved: result?.approved || [],
+                        rejected: result?.rejected || [],
+                    };
+                    yearPlanRemovedDates = [];
                     updateYearPlanDisplay();
                     renderYearCalendar();
-                    
-                    const totalExisting = yearPlanExistingDates.planned.length + 
-                                         yearPlanExistingDates.approved.length + 
+
+                    const totalExisting = yearPlanExistingDates.planned.length +
+                                         yearPlanExistingDates.approved.length +
                                          yearPlanExistingDates.rejected.length;
                     if (totalExisting > 0) {
                         showNotification(`📅 Znaleziono ${totalExisting} zaplanowanych dni`, 'info');
@@ -8899,14 +9064,13 @@ return;
                         showNotification('Kliknij na dni aby zaplanować urlop', 'info');
                     }
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     console.error('❌ Błąd ładowania planów:', error);
                     yearPlanExistingDates = { planned: [], approved: [], rejected: [] };
                     updateYearPlanDisplay();
                     renderYearCalendar();
                     showNotification('Kliknij na dni aby zaplanować urlop', 'info');
-                })
-                .getYearPlanDatesForCalendar(currentUser.login, yearPlanYear);
+                });
         }
 
         /**
@@ -9307,18 +9471,6 @@ return;
             
             console.log('Zapisuję plan roczny:', planData);
             
-            // Sprawdź czy backend dostępny
-            if (typeof google === 'undefined' || !google.script) {
-                let msg = '✅ Plan urlopowy zapisany (tryb testowy):\n';
-                if (hasNewDates) msg += `  + ${yearPlanSelectedDates.length} nowych dni\n`;
-                if (hasRemovedDates) msg += `  - ${yearPlanRemovedDates.length} usuniętych dni`;
-                showNotification(msg, 'success');
-                setTimeout(() => {
-                    showView('absenceType');
-                }, 2000);
-                return;
-            }
-            
             // Pokaż ładowanie
             let loadingMsg = '⏳ Zapisuję zmiany w planie...';
             if (hasNewDates && hasRemovedDates) {
@@ -9329,18 +9481,14 @@ return;
                 loadingMsg = `⏳ Usuwam ${yearPlanRemovedDates.length} dni z planu...`;
             }
             showNotification(loadingMsg, 'info');
-            
-            // Wywołanie backendu
-            google.script.run
-                .withSuccessHandler(function(result) {
+
+            apiSubmitYearPlan(planData)
+                .then(function(result) {
                     console.log('Odpowiedź backendu:', result);
                     if (result && result.success) {
                         showNotification('✅ ' + result.message, 'success');
-                        
-                        // Wyczyść zaznaczenia
                         yearPlanSelectedDates = [];
                         yearPlanRemovedDates = [];
-                        
                         setTimeout(() => {
                             updateManagerNotificationBadge();
                             showView('absenceType');
@@ -9349,11 +9497,10 @@ return;
                         showNotification('❌ ' + (result ? result.message : 'Błąd zapisu'), 'error');
                     }
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     console.error('Błąd submitYearPlan:', error);
                     showNotification('❌ Błąd połączenia: ' + error.message, 'error');
-                })
-                .submitYearPlanRequest(planData);
+                });
         };
 
         /**
@@ -9550,83 +9697,42 @@ return;
                 }
             }
             
-            // TRYB API (gdy nie ma google.script)
-            if (typeof google === 'undefined' || !google.script) {
-                // 1) natychmiast UI jak było
-                showNotification('✅ Wniosek urlopowy złożony! Oczekuje na zatwierdzenie.', 'success');
-            
-                document.getElementById('vacationStartDate').value = '';
-                document.getElementById('vacationEndDate').value = '';
-                document.getElementById('vacationComment').value = '';
-                document.getElementById('vacationInfo').style.display = 'none';
-            
-                setTimeout(() => {
-                    showView('absenceType');
-                    loadAbsenceTypeRequests();
-                }, 500);
-            
-                // 2) zapis w tle do API
-                apiCreateVacationRequest({
-                    login: currentUser.login,
-                    code: currentUser.code,
-                    startDate,
-                    endDate,
-                    comment,
-                    vacationType
-                })
-                .then(() => {
-                    // odśwież listę moich wniosków (żeby kolizje działały)
-                    loadUserVacationRequests(currentUser.login);
-                })
-                .catch(err => {
-                    console.error('❌ create vacation API error:', err);
-                    showNotification('❌ Błąd zapisu wniosku: ' + (err?.message || err), 'error');
-                });
-            
-                return;
-            }
-            
             // 1. NATYCHMIAST - pokaż sukces i wyczyść formularz
-    showNotification('✅ Wniosek urlopowy złożony! Oczekuje na zatwierdzenie.', 'success');
-    
-    // Wyczyść formularz
-    document.getElementById('vacationStartDate').value = '';
-    document.getElementById('vacationEndDate').value = '';
-    document.getElementById('vacationComment').value = '';
-    document.getElementById('vacationInfo').style.display = 'none';
-    
-    // 2. NATYCHMIAST - wróć do wyboru typu
-    setTimeout(() => {
-        showView('absenceType');
-        loadAbsenceTypeRequests();
-    }, 500);
-    
-    // 3. W TLE - zapisz do backendu
-    google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.success) {
-                console.log('✅ Wniosek zapisany w bazie');
+            showNotification('✅ Wniosek urlopowy złożony! Oczekuje na zatwierdzenie.', 'success');
+
+            document.getElementById('vacationStartDate').value = '';
+            document.getElementById('vacationEndDate').value = '';
+            document.getElementById('vacationComment').value = '';
+            document.getElementById('vacationInfo').style.display = 'none';
+
+            // 2. NATYCHMIAST - wróć do wyboru typu
+            setTimeout(() => {
+                showView('absenceType');
+                loadAbsenceTypeRequests();
+            }, 500);
+
+            // 3. W TLE - zapisz przez API
+            apiCreateVacationRequest({
+                login: currentUser.login,
+                code: currentUser.code,
+                startDate,
+                endDate,
+                comment,
+                vacationType
+            })
+            .then(() => {
+                loadUserVacationRequests(currentUser.login);
                 updateManagerNotificationBadge();
-            } else {
-                console.error('❌ Błąd zapisu:', result.message);
-                showNotification('⚠️ Uwaga: ' + result.message, 'error');
-            }
-        })
-        .withFailureHandler(function(error) {
-            console.error('❌ Błąd połączenia:', error);
-            showNotification('⚠️ Błąd połączenia - sprawdź czy wniosek został zapisany', 'error');
-        })
-        .submitVacationRequest(currentUser.login, startDate, endDate, comment, vacationType);
+            })
+            .catch(err => {
+                console.error('❌ create vacation API error:', err);
+                showNotification('⚠️ Błąd zapisu wniosku: ' + (err?.message || err), 'error');
+            });
 };
 
         window.processVacation = function(requestId, decision) {
         const comment = prompt(`${decision === 'Zatwierdzony' ? 'Zatwierdź' : 'Odrzuć'} wniosek - komentarz (opcjonalny):`);
         if (comment === null) return;
-        
-        if (typeof google === 'undefined' || !google.script) {
-            showNotification('Operacja wykonana (tryb testowy)', 'success');
-            return;
-        }
         
         // 1. NATYCHMIAST znajdź i ukryj kartę wniosku
         const allCards = document.querySelectorAll('.vacation-request-item');
@@ -9698,9 +9804,9 @@ return;
             }
         }
         
-        // 5. W TLE zapisz do bazy
-        google.script.run
-            .withSuccessHandler(function(result) {
+        // 5. W TLE zapisz przez API
+        apiProcessVacation(currentUser.login, requestId, decision, comment)
+            .then(function(result) {
                 if (result.success) {
                     console.log('✅ Wniosek zapisany w bazie');
                     updateManagerNotificationBadge();
@@ -9710,12 +9816,11 @@ return;
                     loadPendingVacationRequests();
                 }
             })
-            .withFailureHandler(function(error) {
+            .catch(function(error) {
                 console.error('❌ Błąd połączenia:', error);
                 showNotification('⚠️ Błąd połączenia - odświeżam', 'error');
                 loadPendingVacationRequests();
-            })
-            .processVacationRequest(requestId, decision, comment);
+            });
     };
 
         // ===== OBSŁUGA PRZYCISKU GÓRNEGO PASKA =====
@@ -9953,49 +10058,45 @@ function updateTopBarButton() {
             document.getElementById('vacationComment').value = '';
             document.getElementById('vacationInfo').style.display = 'none';
             
-            if (typeof google !== 'undefined' && google.script) {
-                google.script.run
-                    .withSuccessHandler(function(balance) {
-                        console.log('Saldo użytkownika:', balance);
-                        
-                        document.getElementById('urlopPrzysługujący').textContent = balance.przysługujący || 0;
-                        document.getElementById('urlopZaległy').textContent = balance.zaległy || 0;
-                        document.getElementById('urlopWykorzystany').textContent = balance.wykorzystany || 0;
-                        document.getElementById('urlopPozostały').textContent = balance.pozostały || 0;
-                        document.getElementById('vacationBalance').style.display = 'block';
-                        
-                        if (balance.przysługujący === 0 && balance.pozostały === 0) {
-                            showNotification('Nie masz dostępnych dni urlopu. Nie możesz złożyć wniosku.', 'error');
-                            
-                            const formElements = document.querySelectorAll('.vacation-form input, .vacation-form textarea, .vacation-form button');
-                            formElements.forEach(el => {
-                                el.disabled = true;
-                            });
-                            
-                            const warningDiv = document.createElement('div');
-                            warningDiv.className = 'vacation-info collision-error';
-                            warningDiv.innerHTML = `
-                                <strong>⚠️ Brak dostępnych dni urlopu</strong><br>
-                                Nie możesz złożyć nowego wniosku urlopowego.<br>
-                                Przysługujący: ${balance.przysługujący} dni | Pozostały: ${balance.pozostały} dni
-                            `;
-                            document.querySelector('.vacation-form').insertBefore(
-                                warningDiv, 
-                                document.querySelector('.vacation-form').firstChild
-                            );
-                        } else {
-                            const formElements = document.querySelectorAll('.vacation-form input, .vacation-form textarea, .vacation-form button');
-                            formElements.forEach(el => {
-                                el.disabled = false;
-                            });
-                        }
-                    })
-                    .withFailureHandler(function(error) {
-                        console.error('Błąd ładowania saldo:', error);
-                        showNotification('Błąd sprawdzania dostępnych dni urlopu', 'error');
-                    })
-                    .getUserVacationBalance(currentUser.login);
-            }
+            apiVacationBalance(currentUser.login)
+                .then(function(resp) {
+                    const balance = resp?.balance || resp;
+                    console.log('Saldo użytkownika:', balance);
+
+                    document.getElementById('urlopPrzysługujący').textContent = balance.przysługujący || 0;
+                    document.getElementById('urlopZaległy').textContent = balance.zaległy || 0;
+                    document.getElementById('urlopWykorzystany').textContent = balance.wykorzystany || 0;
+                    document.getElementById('urlopPozostały').textContent = balance.pozostały || 0;
+                    document.getElementById('vacationBalance').style.display = 'block';
+
+                    userVacationBalances[currentUser.login] = balance;
+
+                    if (balance.przysługujący === 0 && balance.pozostały === 0) {
+                        showNotification('Nie masz dostępnych dni urlopu. Nie możesz złożyć wniosku.', 'error');
+
+                        const formElements = document.querySelectorAll('.vacation-form input, .vacation-form textarea, .vacation-form button');
+                        formElements.forEach(el => { el.disabled = true; });
+
+                        const warningDiv = document.createElement('div');
+                        warningDiv.className = 'vacation-info collision-error';
+                        warningDiv.innerHTML = `
+                            <strong>⚠️ Brak dostępnych dni urlopu</strong><br>
+                            Nie możesz złożyć nowego wniosku urlopowego.<br>
+                            Przysługujący: ${balance.przysługujący} dni | Pozostały: ${balance.pozostały} dni
+                        `;
+                        document.querySelector('.vacation-form').insertBefore(
+                            warningDiv,
+                            document.querySelector('.vacation-form').firstChild
+                        );
+                    } else {
+                        const formElements = document.querySelectorAll('.vacation-form input, .vacation-form textarea, .vacation-form button');
+                        formElements.forEach(el => { el.disabled = false; });
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Błąd ładowania saldo:', error);
+                    showNotification('Błąd sprawdzania dostępnych dni urlopu', 'error');
+                });
             
             loadUserVacationRequests(currentUser.login);
         }
@@ -10056,8 +10157,7 @@ function updateTopBarButton() {
         function loadUserVacationRequests(login) {
     const container = document.getElementById('userVacationRequests');
     container.innerHTML = 'Ładowanie wniosków...';
-    
-    if (typeof google === 'undefined' || !google.script) {
+
     apiMyVacationRequests(login)
       .then(res => {
         const requests = res?.requests || [];
@@ -10090,6 +10190,14 @@ function updateTopBarButton() {
               ${request.commentEmployee ? `<p><em>"${request.commentEmployee}"</em></p>` : ''}
               <small>Złożony: ${request.dateSubmitted}</small>
               ${request.commentManager ? `<p style="margin-top: 10px; color: #666; padding: 8px; background: #f8f9fa; border-radius: 4px;"><strong>Komentarz kierownika:</strong> ${request.commentManager}</p>` : ''}
+
+              ${request.status === 'Zatwierdzony' ? `
+                  <div style="margin-top: 15px;">
+                      <button onclick="downloadVacationPDF(${request.id})" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">
+                          📄 Pobierz PDF do podpisu
+                      </button>
+                  </div>
+              ` : ''}
             </div>
           `;
         });
@@ -10101,62 +10209,6 @@ function updateTopBarButton() {
         container.innerHTML = '<p style="color: red;">Błąd ładowania wniosków</p>';
         currentUserVacationRequests = [];
       });
-
-    return;
-}
-    
-    google.script.run
-        .withSuccessHandler(function(requests) {
-            // ✅ ZAPISZ WNIOSKI DO GLOBALNEJ ZMIENNEJ
-            currentUserVacationRequests = requests || [];
-            
-            if (!requests || requests.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">Brak złożonych wniosków</p>';
-                return;
-            }
-            
-            let html = '';
-            requests.forEach(request => {
-                const statusColor = getStatusColor(request.status);
-                const typeLabel = getVacationTypeName(request.vacationType || 'planowany');
-                const statusClass = request.status === 'Zatwierdzony' ? 'approved' : 
-                                  request.status === 'Odrzucony' ? 'rejected' : 'pending';
-                
-                html += `
-          <div class="vacation-request-item ${statusClass}">
-              <div style="display: flex; justify-content: space-between;">
-                  <div>
-                      <strong>${request.dateFrom} - ${request.dateTo}</strong> 
-                      (${request.workingDays} dni)
-                      <span style="background: #e3f2fd; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 10px;">${typeLabel}</span>
-                  </div>
-                  <div style="color: ${statusColor}; font-weight: bold;">
-                      ${request.status}
-                  </div>
-              </div>
-              ${request.commentEmployee ? `<p><em>"${request.commentEmployee}"</em></p>` : ''}
-              <small>Złożony: ${request.dateSubmitted}</small>
-              ${request.commentManager ? `<p style="margin-top: 10px; color: #666; padding: 8px; background: #f8f9fa; border-radius: 4px;"><strong>Komentarz kierownika:</strong> ${request.commentManager}</p>` : ''}
-              
-              ${request.status === 'Zatwierdzony' ? `
-                  <div style="margin-top: 15px;">
-                      <button onclick="downloadVacationPDF(${request.id})" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">
-                          📄 Pobierz PDF do podpisu
-                      </button>
-                  </div>
-              ` : ''}
-          </div>
-`;
-            });
-            
-            container.innerHTML = html;
-        })
-        .withFailureHandler(function(error) {
-            console.error('Błąd:', error);
-            container.innerHTML = '<p style="color: red;">Błąd ładowania wniosków</p>';
-            currentUserVacationRequests = []; // Resetuj przy błędzie
-        })
-        .getVacationRequests(login);
 }
 
 // ===== ZARZĄDZANIE NIEOBECNOŚCIAMI - ZAKŁADKI =====
@@ -10211,44 +10263,42 @@ function updateTopBarButton() {
          * Aktualizuje liczniki na zakładkach
          */
         function updateAbsenceTabCounts() {
-            if (typeof google === 'undefined' || !google.script) {
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(counts) {
+            if (!currentUser || !currentUser.login) return;
+
+            apiGetAbsenceCounts(currentUser.login)
+                .then(function(counts) {
                     document.getElementById('count-vacation').textContent = counts.vacation || 0;
                     document.getElementById('count-dayoff').textContent = counts.dayoff || 0;
                     document.getElementById('count-occasional').textContent = counts.occasional || 0;
                     document.getElementById('count-yearplan').textContent = counts.yearplan || 0;
-                    
+
                     const total = (counts.vacation || 0) + (counts.dayoff || 0) + (counts.occasional || 0) + (counts.yearplan || 0);
                     document.getElementById('pendingCount').textContent = total;
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     console.error('Błąd ładowania liczników:', error);
-                })
-                .getPendingAbsenceCountsByType();
+                });
         }
         
         /**
          * Ładuje oczekujące wnioski o dzień wolny
          */
         function loadPendingDayOffRequests() {
-            google.script.run
-                .withSuccessHandler(function(requests) {
+            apiGetPendingDayOff(currentUser.login)
+                .then(function(data) {
+                    const requests = data?.requests || [];
                     const container = document.getElementById('managerVacationRequests');
-                    
+
                     if (!requests || requests.length === 0) {
                         container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o dzień wolny do zatwierdzenia</p>';
                         return;
                     }
-                    
+
                     let html = '';
                     requests.forEach(request => {
-                        const timeInfo = request.timeFrom && request.timeTo ? 
+                        const timeInfo = request.timeFrom && request.timeTo ?
                             `<br><small>Godziny: ${request.timeFrom} - ${request.timeTo}</small>` : '';
-                        
+
                         html += `
                             <div class="vacation-request-item">
                                 <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -10265,7 +10315,7 @@ function updateTopBarButton() {
                                 </p>
                                 ${request.reason ? `<p><em>"${request.reason}"</em></p>` : ''}
                                 <small>Złożony: ${request.dateSubmitted}</small>
-                                
+
                                 <div class="manager-controls">
                                     <button class="manager-btn approve" onclick="processDayOff(${request.id}, 'Zatwierdzony')">
                                         Zatwierdź
@@ -10277,29 +10327,29 @@ function updateTopBarButton() {
                             </div>
                         `;
                     });
-                    
+
                     container.innerHTML = html;
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     console.error('Błąd:', error);
                     document.getElementById('managerVacationRequests').innerHTML = '<p style="color: red;">Błąd ładowania wniosków</p>';
-                })
-                .getPendingDayOffRequests();
+                });
         }
         
         /**
          * Ładuje oczekujące wnioski o urlop okolicznościowy
          */
         function loadPendingOccasionalRequests() {
-            google.script.run
-                .withSuccessHandler(function(requests) {
+            apiGetPendingOccasional(currentUser.login)
+                .then(function(data) {
+                    const requests = data?.requests || [];
                     const container = document.getElementById('managerVacationRequests');
-                    
+
                     if (!requests || requests.length === 0) {
                         container.innerHTML = '<p style="text-align: center; color: #666;">Brak wniosków o urlop okolicznościowy do zatwierdzenia</p>';
                         return;
                     }
-                    
+
                     let html = '';
                     requests.forEach(request => {
                         html += `
@@ -10319,7 +10369,7 @@ function updateTopBarButton() {
                                 </p>
                                 ${request.note ? `<p><em>"${request.note}"</em></p>` : ''}
                                 <small>Złożony: ${request.dateSubmitted}</small>
-                                
+
                                 <div class="manager-controls">
                                     <button class="manager-btn approve" onclick="processOccasionalLeave(${request.id}, 'Zatwierdzony')">
                                         Zatwierdź
@@ -10331,22 +10381,22 @@ function updateTopBarButton() {
                             </div>
                         `;
                     });
-                    
+
                     container.innerHTML = html;
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     console.error('Błąd:', error);
                     document.getElementById('managerVacationRequests').innerHTML = '<p style="color: red;">Błąd ładowania wniosków</p>';
-                })
-                .getPendingOccasionalLeaveRequests();
+                });
         }
         
         /**
          * Ładuje oczekujące plany roczne
          */
         function loadPendingYearPlanRequests() {
-            google.script.run
-                .withSuccessHandler(function(requests) {
+            apiGetPendingYearPlan(currentUser.login)
+                .then(function(data) {
+                    const requests = data?.requests || [];
                     const container = document.getElementById('managerVacationRequests');
                     
                     if (!requests || requests.length === 0) {
@@ -10423,11 +10473,10 @@ function updateTopBarButton() {
                     
                     container.innerHTML = html;
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     console.error('Błąd:', error);
                     document.getElementById('managerVacationRequests').innerHTML = '<p style="color: red;">Błąd ładowania wniosków</p>';
-                })
-                .getPendingYearPlanRequests();
+                });
         }
         
         /**
@@ -10486,9 +10535,9 @@ function updateTopBarButton() {
             }
             
             showNotification('⏳ Przetwarzanie...', 'info');
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
+
+            apiProcessYearPlanWithDates(currentUser.login, requestId, finalDecision, comment, selectedDates)
+                .then(function(result) {
                     if (result && result.success) {
                         showNotification('✅ ' + result.message, 'success');
                         loadPendingYearPlanRequests();
@@ -10498,10 +10547,9 @@ function updateTopBarButton() {
                         showNotification('❌ ' + (result ? result.message : 'Błąd'), 'error');
                     }
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     showNotification('❌ Błąd: ' + error.message, 'error');
-                })
-                .processYearPlanWithDates(requestId, finalDecision, comment, selectedDates);
+                });
         };
         
         /**
@@ -10534,9 +10582,9 @@ function updateTopBarButton() {
     
     showNotification(`✅ ${decision === 'Zatwierdzony' ? 'Zatwierdzono' : 'Odrzucono'} wniosek`, 'success');
     
-    // W TLE zapisz
-    google.script.run
-        .withSuccessHandler(function(result) {
+    // W TLE zapisz przez API
+    apiProcessDayOff(currentUser.login, requestId, decision, comment)
+        .then(function(result) {
             if (result.success) {
                 updateAbsenceTabCounts();
                 updateManagerNotificationBadge();
@@ -10552,11 +10600,10 @@ function updateTopBarButton() {
                 loadPendingDayOffRequests();
             }
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
             showNotification('❌ Błąd: ' + error.message, 'error');
             loadPendingDayOffRequests();
-        })
-        .processDayOffRequest(requestId, decision, comment);
+        });
 };
         
         /**
@@ -10589,9 +10636,9 @@ function updateTopBarButton() {
     
     showNotification(`✅ ${decision === 'Zatwierdzony' ? 'Zatwierdzono' : 'Odrzucono'} wniosek`, 'success');
     
-    // W TLE zapisz
-    google.script.run
-        .withSuccessHandler(function(result) {
+    // W TLE zapisz przez API
+    apiProcessOccasional(currentUser.login, requestId, decision, comment)
+        .then(function(result) {
             if (result.success) {
                 updateAbsenceTabCounts();
                 updateManagerNotificationBadge();
@@ -10607,11 +10654,10 @@ function updateTopBarButton() {
                 loadPendingOccasionalRequests();
             }
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
             showNotification('❌ Błąd: ' + error.message, 'error');
             loadPendingOccasionalRequests();
-        })
-        .processOccasionalLeaveRequest(requestId, decision, comment);
+        });
 };
         
         /**
@@ -10619,11 +10665,11 @@ function updateTopBarButton() {
          */
         window.processYearPlan = function(requestId, decision) {
             const comment = decision === 'Odrzucony' ? prompt('Podaj powód odrzucenia (opcjonalnie):') || '' : '';
-            
+
             showNotification('⏳ Przetwarzanie...', 'info');
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
+
+            apiProcessYearPlan(currentUser.login, requestId, decision, comment)
+                .then(function(result) {
                     if (result && result.success) {
                         showNotification('✅ ' + result.message, 'success');
                         loadPendingYearPlanRequests();
@@ -10633,10 +10679,9 @@ function updateTopBarButton() {
                         showNotification('❌ ' + (result ? result.message : 'Błąd'), 'error');
                     }
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     showNotification('❌ Błąd: ' + error.message, 'error');
-                })
-                .processYearPlanRequest(requestId, decision, comment);
+                });
         };
 
         function loadPendingVacationRequests() {
@@ -10654,37 +10699,32 @@ function updateTopBarButton() {
         </div>
     `;
     
-    if (typeof google === 'undefined' || !google.script) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">Tryb testowy</p>';
-        document.getElementById('pendingCount').textContent = '0';
-        return;
-    }
-    
-    // 2. Pobierz dane z backendu
-    google.script.run
-        .withSuccessHandler(function(requests) {
+    // 2. Pobierz dane z backendu przez API
+    apiGetPendingVacations(currentUser.login)
+        .then(function(data) {
+            const requests = data?.requests || [];
             document.getElementById('pendingCount').textContent = requests.length;
-            
+
             // Zaktualizuj licznik w zakładce
             const tabCountEl = document.getElementById('count-vacation');
             if (tabCountEl) tabCountEl.textContent = requests.length;
-            
+
             if (requests.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #666;">✅ Brak wniosków do zatwierdzenia</p>';
                 return;
             }
-            
+
             // 3. Renderuj wnioski
             let html = '';
             requests.forEach(request => {
                 const collisionClass = request.collisions && request.collisions.canApprove ? 'vacation-info' : 'collision-error';
-                const collisionText = request.collisions ? 
-                    (request.collisions.canApprove ? 
-                        `${request.collisions.conflicts}/3 osób na urlopie ✓` : 
+                const collisionText = request.collisions ?
+                    (request.collisions.canApprove ?
+                        `${request.collisions.conflicts}/3 osób na urlopie ✓` :
                         `KOLIZJA: ${request.collisions.conflicts}/3 - brak miejsc!`) :
                     'Sprawdzanie kolizji...';
                 const typeLabel = getVacationTypeName(request.vacationType || 'planowany');
-                
+
                 html += `
                     <div class="vacation-request-item">
                         <div style="display: flex; justify-content: space-between;">
@@ -10701,7 +10741,7 @@ function updateTopBarButton() {
                             ${collisionText}
                         </div>
                         <small>Złożony: ${request.dateSubmitted}</small>
-                        
+
                         <div class="manager-controls">
                             <button class="manager-btn approve" onclick="processVacation('${request.id}', 'Zatwierdzony')">
                                 Zatwierdź
@@ -10713,14 +10753,13 @@ function updateTopBarButton() {
                     </div>
                 `;
             });
-            
+
             container.innerHTML = html;
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
             console.error('Błąd:', error);
             container.innerHTML = '<p style="color: red; text-align: center;">❌ Błąd ładowania wniosków</p>';
-        })
-        .getPendingVacationRequests();
+        });
 }
 
         function loadDepartmentsFromSpreadsheet() {
@@ -10895,7 +10934,7 @@ function updateTopBarButton() {
             
             allUsers.sort((a, b) => a.login.localeCompare(b.login));
             
-            if (window.vacationMode && typeof google !== 'undefined' && google.script) {
+            if (window.vacationMode) {
                 loadAllUserBalances(allUsers);
             } else {
                 renderUserTiles(allUsers);
@@ -10905,30 +10944,20 @@ function updateTopBarButton() {
         function loadAllUserBalances(users) {
             const container = document.getElementById('userTiles');
             container.innerHTML = '<div style="text-align: center; color: #666;">Sprawdzam dostępność urlopów...</div>';
-            
-            let loadedCount = 0;
-            const totalUsers = users.length;
-            
-            users.forEach(user => {
-                google.script.run
-                    .withSuccessHandler(function(balance) {
-                        userVacationBalances[user.login] = balance;
-                        loadedCount++;
-                        
-                        if (loadedCount === totalUsers) {
-                            renderUserTiles(users);
-                        }
+
+            const promises = users.map(user =>
+                apiVacationBalance(user.login)
+                    .then(function(resp) {
+                        userVacationBalances[user.login] = resp?.balance || resp;
                     })
-                    .withFailureHandler(function(error) {
+                    .catch(function(error) {
                         console.error('Błąd pobierania saldo dla:', user.login, error);
                         userVacationBalances[user.login] = { przysługujący: 0, pozostały: 0, zaległy: 0, wykorzystany: 0 };
-                        loadedCount++;
-                        
-                        if (loadedCount === totalUsers) {
-                            renderUserTiles(users);
-                        }
                     })
-                    .getUserVacationBalance(user.login);
+            );
+
+            Promise.all(promises).then(function() {
+                renderUserTiles(users);
             });
         }
 
@@ -11468,26 +11497,23 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 
                 showNotification('Zweryfikuj tożsamość (ładowanie danych...)', 'info');
                 
-                // 2. W TLE pobierz dane o urlopach
-                if (typeof google !== 'undefined' && google.script) {
-                    google.script.run
-                        .withSuccessHandler(function(liveCount) {
-                            console.log('📊 Urlopy załadowane w tle:', liveCount);
-                            pendingVacationCount = liveCount;
-                            updateManagerNotificationBadge();
-                            
-                            // Zaktualizuj powiadomienie
-                            if (liveCount > 0) {
-                                showNotification('Zweryfikuj tożsamość (' + liveCount + ' oczekujących wniosków)', 'info');
-                            } else {
-                                showNotification('Zweryfikuj tożsamość aby kontynuować', 'info');
-                            }
-                        })
-                        .withFailureHandler(function(error) {
-                            console.error('❌ Błąd sprawdzania urlopów:', error);
-                        })
-                        .getPendingAbsenceRequestsCount();
-                }
+                // 2. W TLE pobierz dane o urlopach przez API
+                apiGetPendingAbsenceCount(currentUser.login)
+                    .then(function(data) {
+                        const liveCount = data?.count || 0;
+                        console.log('📊 Urlopy załadowane w tle:', liveCount);
+                        pendingVacationCount = liveCount;
+                        updateManagerNotificationBadge();
+
+                        if (liveCount > 0) {
+                            showNotification('Zweryfikuj tożsamość (' + liveCount + ' oczekujących wniosków)', 'info');
+                        } else {
+                            showNotification('Zweryfikuj tożsamość aby kontynuować', 'info');
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('❌ Błąd sprawdzania urlopów:', error);
+                    });
                 
                 return; // Zakończ - czekamy na weryfikację
             }
@@ -11659,18 +11685,18 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         }
 
         function updateManagerNotificationBadge() {
-            if (typeof google === 'undefined' || !google.script) {
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(count) {
+            if (!currentUser || !currentUser.login) return;
+
+            apiGetPendingAbsenceCount(currentUser.login)
+                .then(function(data) {
+                    const count = data?.count || 0;
                     const oldCount = pendingVacationCount;
                     pendingVacationCount = count;
-                    
+
                     const vacationBtn = document.getElementById('vacationBtn');
+                    if (!vacationBtn) return;
                     let badge = vacationBtn.querySelector('.vacation-btn-badge');
-                    
+
                     if (count > 0) {
                         if (!badge) {
                             badge = document.createElement('div');
@@ -11679,23 +11705,20 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                         }
                         badge.textContent = count;
                     } else {
-                        if (badge) {
-                            badge.remove();
-                        }
+                        if (badge) badge.remove();
                     }
-                    
+
                     if (currentView === 'user') {
                         generateUserTiles();
                     }
-                    
+
                     if (count > oldCount && oldCount > 0) {
                         showNotification(`Nowy wniosek do zatwierdzenia! (${count} oczekujących)`, 'info');
                     }
                 })
-                .withFailureHandler(function(error) {
+                .catch(function(error) {
                     console.error('Błąd licznika:', error);
-                })
-                .getPendingAbsenceRequestsCount();
+                });
         }
 
         function loadVacationBalance() {
@@ -14134,20 +14157,19 @@ window.submitL4Registration = function() {
         ensureCodeInputFocus();
     }, 500);
     
-    // 3. W TLE - zapisz do backendu
-    google.script.run
-        .withSuccessHandler(function(result) {
+    // 3. W TLE - zapisz przez API
+    apiRegisterL4(currentUser.login, employeeLogin, startDate, endDate, l4Type, note)
+        .then(function(result) {
             if (result.success) {
                 console.log('✅ L4 zapisane w bazie');
             } else {
                 showNotification('⚠️ ' + result.message, 'error');
             }
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
             console.error('Błąd rejestracji L4:', error);
             showNotification('⚠️ Błąd połączenia', 'error');
-        })
-        .registerL4(employeeLogin, startDate, endDate, l4Type, note);
+        });
 };
 
 // ===== MODUŁ ZGŁOSZEŃ - TICKETY =====
