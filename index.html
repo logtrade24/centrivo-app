@@ -4200,6 +4200,68 @@ async function apiRegisterL4(login, employeeLogin, startDate, endDate, l4Type, n
   return data;
 }
 
+// ===== API HELPERS — TICKETY =====
+
+async function apiGetOpenTicketsCount() {
+  const r = await fetch(`${API_BASE}/tickets/open-count`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiGetUnreadTicketReplies(login) {
+  const r = await fetch(`${API_BASE}/tickets/unread-replies`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiGetUnreadTicketsCount(login) {
+  const r = await fetch(`${API_BASE}/tickets/unread-count`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiGetCriticalTicketsCount(login) {
+  const r = await fetch(`${API_BASE}/tickets/critical-count`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiGetCriticalTickets(login) {
+  const r = await fetch(`${API_BASE}/tickets/critical`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiGetAllTickets(login, filter) {
+  const r = await fetch(`${API_BASE}/tickets/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, filter: filter || 'all' }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiGetMyTickets(login) {
+  const r = await fetch(`${API_BASE}/tickets/my`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiSubmitTicket(login, name, category, title, description, location, priority) {
+  const r = await fetch(`${API_BASE}/tickets/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, name, category, title, description, location, priority }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiUpdateTicketStatus(login, ticketId, newStatus, comment) {
+  const r = await fetch(`${API_BASE}/tickets/update-status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, ticketId, newStatus, comment }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
+async function apiMarkTicketAsRead(login, ticketId) {
+  const r = await fetch(`${API_BASE}/tickets/mark-read`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, ticketId }) });
+  const data = await r.json().catch(() => ({}));
+  return data;
+}
+
     let dashSnapshotCache = null;
     let dashDeptFilter = 'ALL';
     let dashShiftFilter = 'ALL';
@@ -6958,31 +7020,14 @@ function focusEanInput(retries = 20, delay = 150) {
 
         // ===== LICZNIK OTWARTYCH TICKETÓW =====
         function updateTicketsNotificationBadge() {
-            console.log('🔄 Sprawdzam liczbę otwartych ticketów...');
-            
-            if (typeof google === 'undefined' || !google.script) {
-                console.log('⚠️ Brak połączenia z backendem (tryb testowy)');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(count) {
-                    console.log('✅ Otrzymano liczbę ticketów:', count);
+            apiGetOpenTicketsCount()
+                .then(function(data) {
+                    const count = data?.count || 0;
                     openTicketsCount = count;
-                    
-                    // Znajdź przycisk "Zgłoś problem"
                     const ticketBtn = document.querySelector('button[onclick="openTicketSystem()"]');
-                    
-                    if (!ticketBtn) {
-                        console.log('⚠️ Nie znaleziono przycisku ticketów');
-                        return;
-                    }
-                    
+                    if (!ticketBtn) return;
                     let badge = ticketBtn.querySelector('.vacation-btn-badge');
-                    
                     if (count > 0) {
-                        console.log('📊 Tworzę/aktualizuję badge z liczbą:', count);
-                        
                         if (!badge) {
                             badge = document.createElement('div');
                             badge.className = 'vacation-btn-badge';
@@ -6991,69 +7036,33 @@ function focusEanInput(retries = 20, delay = 150) {
                         }
                         badge.textContent = count;
                     } else {
-                        console.log('ℹ️ Brak otwartych ticketów - usuwam badge');
-                        if (badge) {
-                            badge.remove();
-                        }
+                        if (badge) badge.remove();
                     }
                 })
-                .withFailureHandler(function(error) {
-                    console.error('❌ Błąd pobierania liczby ticketów:', error);
-                })
-                .getOpenTicketsCount();
+                .catch(function(e) { console.error('Błąd badge ticketów:', e); });
         }
 
         // ===== LICZNIK NIEODCZYTANYCH ODPOWIEDZI (dla pracownika) =====
         function updateUnreadTicketRepliesBadge(userLogin) {
-            if (!userLogin) {
-                console.log('⚠️ Brak loginu użytkownika - pomijam sprawdzanie odpowiedzi');
-                return;
-            }
-            
-            console.log('🔄 Sprawdzam nieodczytane odpowiedzi dla:', userLogin);
-            
-            if (typeof google === 'undefined' || !google.script) {
-                console.log('⚠️ Brak połączenia z backendem (tryb testowy)');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(count) {
-                    console.log('✅ Nieodczytane odpowiedzi dla', userLogin, ':', count);
-                    unreadTicketRepliesCount = count;
-                    
-                    // Aktualizuj badge w panelu operatora (jeśli jesteśmy w tym widoku)
+            if (!userLogin) return;
+            apiGetUnreadTicketReplies(userLogin)
+                .then(function(data) {
+                    unreadTicketRepliesCount = data?.count || 0;
                     if (currentView === 'action') {
                         updateMyTicketsTileInActionView();
                     }
                 })
-                .withFailureHandler(function(error) {
-                    console.error('❌ Błąd pobierania nieodczytanych odpowiedzi:', error);
-                })
-                .getUnreadTicketRepliesCount(userLogin);
+                .catch(function(e) { console.error('Błąd nieodczytanych ticketów:', e); });
         }
 
         // ===== LICZNIK KRYTYCZNYCH TICKETÓW (dla kierownika) =====
         function updateCriticalTicketsBadge() {
-            console.log('🔄 Sprawdzam krytyczne tickety...');
-            
-            if (typeof google === 'undefined' || !google.script) {
-                console.log('⚠️ Brak połączenia z backendem (tryb testowy)');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(count) {
-                    console.log('🔴 Liczba krytycznych ticketów:', count);
-                    criticalTicketsCount = count;
-                    
-                    // Aktualizuj badge na przycisku zgłoszeń w status bar
+            apiGetCriticalTicketsCount('jerzyd')
+                .then(function(data) {
+                    criticalTicketsCount = data?.count || 0;
                     updateTicketsButtonStyle();
                 })
-                .withFailureHandler(function(error) {
-                    console.error('❌ Błąd pobierania krytycznych ticketów:', error);
-                })
-                .getCriticalTicketsCount();
+                .catch(function(e) { console.error('Błąd krytycznych ticketów:', e); });
             }
 
             // ===== CACHE OGŁOSZEŃ - ŁADOWANIE =====
@@ -7334,20 +7343,6 @@ function closeCriticalTicketsModal() {
     showNotification(`${currentUser.login} - panel operatora`, 'info');
 }
 
-            // ===== PLACEHOLDER - WIDOK MOICH ZGŁOSZEŃ (zrobimy w następnym kroku) =====
-            function showMyTicketsView() {
-                document.getElementById('unreadTicketsModal').classList.remove('show');
-                showNotification('Funkcja "Moje zgłoszenia" - wkrótce!', 'info');
-                // TODO: Implementacja w następnym kroku
-            }
-
-            // ===== PLACEHOLDER - WIDOK MANAGERA ZGŁOSZEŃ (zrobimy w następnym kroku) =====
-            function showManagerTicketsView() {
-                document.getElementById('criticalTicketsModal').classList.remove('show');
-                showNotification('Panel zgłoszeń kierownika - wkrótce!', 'info');
-                // TODO: Implementacja w następnym kroku
-            }
-
             // ===== POKAŻ MODAL NIEODCZYTANYCH ODPOWIEDZI =====
             function showUnreadTicketsModal(userName, count) {
                 document.getElementById('unreadTicketsUserName').textContent = userName;
@@ -7360,12 +7355,12 @@ function closeCriticalTicketsModal() {
             // ===== POKAŻ MODAL KRYTYCZNYCH TICKETÓW =====
             function showCriticalTicketsModal() {
                 // Pobierz szczegóły pierwszego krytycznego ticketu
-                if (typeof google !== 'undefined' && google.script) {
-                    google.script.run
-                        .withSuccessHandler(function(criticalTickets) {
+                apiGetCriticalTickets('jerzyd')
+                    .then(function(data) {
+                        const criticalTickets = data?.tickets || [];
                             if (criticalTickets && criticalTickets.length > 0) {
                                 const ticket = criticalTickets[0]; // Pierwszy krytyczny
-                                
+
                                 const detailsHTML = `
                                     <div style="text-align: left; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
                                         <p style="margin: 8px 0;"><strong>ID:</strong> #${ticket.id}</p>
@@ -7376,24 +7371,18 @@ function closeCriticalTicketsModal() {
                                     </div>
                                     ${criticalTickets.length > 1 ? `<p style="margin-top: 15px; font-size: 14px;">+ jeszcze ${criticalTickets.length - 1} krytycznych zgłoszeń</p>` : ''}
                                 `;
-                                
+
                                 document.getElementById('criticalTicketDetails').innerHTML = detailsHTML;
                                 document.getElementById('criticalTicketsModal').classList.add('show');
-                                
-                                console.log('🔴 Pokazuję modal krytycznych ticketów');
                             } else {
                                 // Brak krytycznych - normalny flow
                                 proceedToActionView();
                             }
                         })
-                        .withFailureHandler(function(error) {
-                            console.error('❌ Błąd pobierania krytycznych ticketów:', error);
+                        .catch(function(error) {
+                            console.error('Błąd pobierania krytycznych ticketów:', error);
                             proceedToActionView();
-                        })
-                        .getCriticalTickets();
-                } else {
-                    proceedToActionView();
-                }
+                        });
             }
 
         // ===== AUTOMATYCZNE ODŚWIEŻANIE =====
@@ -7403,18 +7392,16 @@ function closeCriticalTicketsModal() {
     autoRefreshInterval = setInterval(() => {
         console.log('⏰ Auto-refresh wykonany o:', new Date().toLocaleTimeString());
 
+        // Tickety — zawsze (API i Apps Script)
+        updateTicketsNotificationBadge();
+        updateCriticalTicketsBadge();
+        if (currentUser && currentUser.login) {
+            updateUnreadTicketRepliesBadge(currentUser.login);
+        }
+
         if (typeof google !== 'undefined' && google.script) {
-            // Zawsze sprawdzaj licznik ticketów (niezależnie od widoku)
-            updateTicketsNotificationBadge();
-            updateCriticalTicketsBadge();
-
-            // Odświeżaj cache ogłoszeń dla wszystkich pracowników
+            // Cache ogłoszeń — tylko GAS
             preloadAllAnnouncementsCache();
-
-            // Jeśli użytkownik jest zalogowany - sprawdź jego nieodczytane odpowiedzi
-            if (currentUser && currentUser.login) {
-                updateUnreadTicketRepliesBadge(currentUser.login);
-            }
         }
 
         // Odświeżanie urlopów / badge - działa zawsze (API i Apps Script)
@@ -11665,16 +11652,13 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                     updateButtonStates();
                     updateMyTicketsTileInActionView();
                     
-                    if (currentUser.login !== 'jerzyd' && typeof google !== 'undefined' && google.script) {
-                        google.script.run
-                            .withSuccessHandler(function(count) {
-                                unreadTicketRepliesCount = count;
+                    if (currentUser.login !== 'jerzyd') {
+                        apiGetUnreadTicketsCount(currentUser.login)
+                            .then(function(data) {
+                                unreadTicketRepliesCount = data?.count || 0;
                                 updateMyTicketsTileInActionView();
                             })
-                            .withFailureHandler(function(error) {
-                                console.error('❌ Błąd pobierania nieodczytanych:', error);
-                            })
-                            .getUnreadTicketsCount(currentUser.login);
+                            .catch(function(e) { console.error('Błąd unread tickets:', e); });
                     }
 
                     showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
@@ -11685,27 +11669,25 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 
                 // Funkcja pomocnicza - sprawdź tickety w tle (nie blokuje)
                 function checkTicketsInBackground() {
-                    if (typeof google !== 'undefined' && google.script) {
-                        if (foundUser.login === 'jerzyd') {
-                            google.script.run
-                                .withSuccessHandler(function(criticalCount) {
-                                    criticalTicketsCount = criticalCount;
-                                    if (criticalCount > 0) {
-                                        showCriticalTicketsModal();
-                                    }
-                                })
-                                .getCriticalTicketsCount();
-                        } else {
-                            google.script.run
-                                .withSuccessHandler(function(unreadCount) {
-                                    unreadTicketRepliesCount = unreadCount;
-                                    updateMyTicketsTileInActionView();
-                                    if (unreadCount > 0) {
-                                        showUnreadTicketsModal(foundUser.name, unreadCount);
-                                    }
-                                })
-                                .getUnreadTicketRepliesCount(foundUser.login);
-                        }
+                    if (foundUser.login === 'jerzyd') {
+                        apiGetCriticalTicketsCount('jerzyd')
+                            .then(function(data) {
+                                criticalTicketsCount = data?.count || 0;
+                                if (criticalTicketsCount > 0) {
+                                    showCriticalTicketsModal();
+                                }
+                            })
+                            .catch(function(e) { console.error('Błąd krytycznych ticketów:', e); });
+                    } else {
+                        apiGetUnreadTicketReplies(foundUser.login)
+                            .then(function(data) {
+                                unreadTicketRepliesCount = data?.count || 0;
+                                updateMyTicketsTileInActionView();
+                                if (unreadTicketRepliesCount > 0) {
+                                    showUnreadTicketsModal(foundUser.name, unreadTicketRepliesCount);
+                                }
+                            })
+                            .catch(function(e) { console.error('Błąd nieodczytanych ticketów:', e); });
                     }
                 }
                 
@@ -12131,28 +12113,21 @@ let currentTicketDetails = null;
             
             const deptName = departmentNames[currentDepartment] || currentDepartment;
             
-            // Sprawdź krytyczne tickety (istniejąca logika)
-            if (typeof google !== 'undefined' && google.script) {
-                google.script.run
-                    .withSuccessHandler(function(criticalCount) {
-                        criticalTicketsCount = criticalCount;
-                        
-                        if (criticalCount > 0) {
-                            console.log('🔴 Kierownik ma krytyczne tickety - pokazuję modal');
-                            showCriticalTicketsModal();
-                        } else {
-                            console.log('✅ Brak krytycznych ticketów - panel operatora');
-                            finishManagerLogin(managerData, deptName);
-                        }
-                    })
-                    .withFailureHandler(function(error) {
-                        console.error('❌ Błąd sprawdzania krytycznych:', error);
+            // Sprawdź krytyczne tickety
+            apiGetCriticalTicketsCount('jerzyd')
+                .then(function(data) {
+                    criticalTicketsCount = data?.count || 0;
+
+                    if (criticalTicketsCount > 0) {
+                        showCriticalTicketsModal();
+                    } else {
                         finishManagerLogin(managerData, deptName);
-                    })
-                    .getCriticalTicketsCount();
-            } else {
-                finishManagerLogin(managerData, deptName);
-            }
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Błąd sprawdzania krytycznych ticketów:', error);
+                    finishManagerLogin(managerData, deptName);
+                });
         }
         
         // Pomocnicza funkcja - zakończenie logowania kierownika
@@ -12193,72 +12168,31 @@ function showManagerTicketsView() {
 
 function loadAllTickets() {
     const container = document.getElementById('managerTicketsList');
-    
-    if (!container) {
-        console.error('❌ Nie znaleziono kontenera managerTicketsList');
-        return;
-    }
-    
+    if (!container) return;
+
     container.innerHTML = '<p style="text-align: center; color: #666;">Ładowanie zgłoszeń...</p>';
-    
-    if (typeof google === 'undefined' || !google.script) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">Tryb testowy - brak danych</p>';
-        return;
-    }
-    
-    console.log('🔵 Wywołuję getAllTickets...');
-    
-    google.script.run
-        .withSuccessHandler(function(tickets) {
-            console.log('✅ SUCCESS - otrzymano dane:');
-            console.log('Typ danych:', typeof tickets);
-            console.log('Czy array?', Array.isArray(tickets));
-            console.log('Wartość tickets:', tickets);
-            console.log('tickets.length:', tickets ? tickets.length : 'BRAK LENGTH');
-            
-            // WYPISZ KAŻDY TICKET
-            if (tickets && tickets.length > 0) {
-                console.log('📋 Pierwsze zgłoszenie:', tickets[0]);
-                console.log('📋 Wszystkie zgłoszenia:', JSON.stringify(tickets, null, 2));
-            }
-            
-            if (!tickets) {
-                console.error('❌ tickets jest NULL lub undefined!');
-                container.innerHTML = '<p style="text-align: center; color: red;">Błąd: Brak danych</p>';
-                return;
-            }
-            
-            if (!Array.isArray(tickets)) {
-                console.error('❌ tickets NIE JEST tablicą! Typ:', typeof tickets);
-                container.innerHTML = '<p style="text-align: center; color: red;">Błąd: Nieprawidłowy format danych</p>';
-                return;
-            }
-            
+
+    const managerLogin = (currentUser && currentUser.login) ? currentUser.login : 'jerzyd';
+
+    apiGetAllTickets(managerLogin, currentTicketFilter)
+        .then(function(data) {
+            const tickets = data?.tickets || [];
+
             if (tickets.length === 0) {
-                console.warn('⚠️ tickets.length === 0 - tablica jest pusta!');
                 container.innerHTML = '<p style="text-align: center; color: #666;">Brak zgłoszeń</p>';
                 allTicketsCache = [];
                 updateTicketsCounts([]);
                 return;
             }
-            
-            console.log('✅ Dane prawidłowe - zapisuję do cache');
+
             allTicketsCache = tickets;
-            
-            console.log('📊 Aktualizuję liczniki...');
             updateTicketsCounts(tickets);
-            
-            console.log('🎨 Wywołuję displayFilteredTickets()...');
             displayFilteredTickets();
-            console.log('✅ Wszystko zakończone!');
         })
-        .withFailureHandler(function(error) {
-            console.error('❌ FAILURE:', error);
-            console.error('Error message:', error.message);
-            console.error('Error stack:', error.stack);
+        .catch(function(error) {
+            console.error('Błąd ładowania ticketów:', error);
             container.innerHTML = '<p style="color: red; text-align: center;">Błąd: ' + (error.message || 'Nieznany') + '</p>';
-        })
-        .getAllTickets('all');
+        });
 }
 
 /**
@@ -12540,35 +12474,24 @@ function changeTicketStatus(newStatus) {
         }
     }
     
-    if (typeof google === 'undefined' || !google.script) {
-        showNotification('Status zmieniony (tryb testowy)', 'success');
-        closeTicketDetailsModal();
-        return;
-    }
-    
-    console.log('Zmiana statusu ticketu:', currentTicketDetails.id, 'na:', newStatus);
-    
-    google.script.run
-        .withSuccessHandler(function(result) {
+    const managerLogin = (currentUser && currentUser.login) ? currentUser.login : 'jerzyd';
+
+    apiUpdateTicketStatus(managerLogin, currentTicketDetails.id, newStatus, comment)
+        .then(function(result) {
             if (result.success) {
                 showNotification('✅ ' + result.message, 'success');
                 closeTicketDetailsModal();
-                
-                // Odśwież listę
                 loadAllTickets();
-                
-                // Odśwież liczniki
                 updateTicketsNotificationBadge();
                 updateCriticalTicketsBadge();
             } else {
                 showNotification('❌ ' + result.message, 'error');
             }
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
             console.error('Błąd zmiany statusu:', error);
             showNotification('❌ Błąd: ' + error.message, 'error');
-        })
-        .updateTicketStatus(currentTicketDetails.id, newStatus, comment);
+        });
 }
 
         // ===== PANEL "MOJE ZGŁOSZENIA" DLA PRACOWNIKA =====
@@ -12591,46 +12514,34 @@ function changeTicketStatus(newStatus) {
          */
         function loadMyTickets() {
             const container = document.getElementById('myTicketsList');
-            
-            if (!container) {
-                console.error('❌ Nie znaleziono kontenera myTicketsList');
-                return;
-            }
-            
+            if (!container) return;
+
             if (!currentUser || !currentUser.login) {
                 container.innerHTML = '<p style="text-align: center; color: red;">Błąd: Nie jesteś zalogowany</p>';
                 return;
             }
-            
+
             container.innerHTML = '<p style="text-align: center; color: #666;">Ładowanie zgłoszeń...</p>';
-            
-            if (typeof google === 'undefined' || !google.script) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">Tryb testowy - brak danych</p>';
-                return;
-            }
-            
-            console.log('🔵 Ładuję zgłoszenia dla:', currentUser.login);
-            
-            google.script.run
-                .withSuccessHandler(function(tickets) {
-                    console.log('✅ Pobrano zgłoszenia pracownika:', tickets.length);
-                    
-                    if (!tickets || tickets.length === 0) {
+
+            apiGetMyTickets(currentUser.login)
+                .then(function(data) {
+                    const tickets = data?.tickets || [];
+
+                    if (tickets.length === 0) {
                         container.innerHTML = '<p style="text-align: center; color: #666;">Nie masz jeszcze żadnych zgłoszeń</p>';
                         myTicketsCache = [];
                         updateMyTicketsCounts([]);
                         return;
                     }
-                    
+
                     myTicketsCache = tickets;
                     updateMyTicketsCounts(tickets);
                     displayFilteredMyTickets();
                 })
-                .withFailureHandler(function(error) {
-                    console.error('❌ Błąd ładowania zgłoszeń:', error);
+                .catch(function(error) {
+                    console.error('Błąd ładowania zgłoszeń:', error);
                     container.innerHTML = '<p style="color: red; text-align: center;">Błąd: ' + (error.message || 'Nieznany') + '</p>';
-                })
-                .getMyTickets(currentUser.login);
+                });
         }
 
         /**
@@ -12953,40 +12864,25 @@ function markTicketAsRead() {
         return;
     }
     
-    if (typeof google === 'undefined' || !google.script) {
-        showNotification('Oznaczono jako przeczytane (tryb testowy)', 'success');
-        closeMyTicketDetailsModal();
-        return;
-    }
-    
-    console.log('Oznaczam jako przeczytane:', currentMyTicketDetails.id);
-    
-    google.script.run
-    .withSuccessHandler(function(result) {
-        if (result.success) {
-            showNotification('✅ Oznaczono jako przeczytane', 'success');
-            
-            // ✅ NATYCHMIAST zmniejsz licznik (nie czekaj na backend)
-            if (unreadTicketRepliesCount > 0) {
-                unreadTicketRepliesCount--;
+    const ticketId   = currentMyTicketDetails.id;
+    const loginToUse = (currentUser && currentUser.login) ? currentUser.login : '';
+
+    apiMarkTicketAsRead(loginToUse, ticketId)
+        .then(function(result) {
+            if (result.success) {
+                showNotification('✅ Oznaczono jako przeczytane', 'success');
+                if (unreadTicketRepliesCount > 0) unreadTicketRepliesCount--;
+                updateMyTicketsTileInActionView();
+                closeMyTicketDetailsModal();
+                loadMyTickets();
+            } else {
+                showNotification('❌ ' + result.message, 'error');
             }
-            
-            // ✅ NATYCHMIAST zaktualizuj badge
-            updateMyTicketsTileInActionView();
-            
-            closeMyTicketDetailsModal();
-            
-            // Odśwież listę w tle
-            loadMyTickets();
-        } else {
-            showNotification('❌ ' + result.message, 'error');
-        }
-    })
-        .withFailureHandler(function(error) {
+        })
+        .catch(function(error) {
             console.error('Błąd oznaczania jako przeczytane:', error);
             showNotification('❌ Błąd: ' + error.message, 'error');
-        })
-        .markTicketAsReadByEmployee(currentMyTicketDetails.id);
+        });
 }
 
 // ===== SYSTEM OGŁOSZEŃ =====
@@ -14179,59 +14075,32 @@ window.submitTicket = function() {
         return;
     }
     
-    // Tryb testowy
-    if (typeof google === 'undefined' || !google.script) {
-        showNotification('✅ Zgłoszenie wysłane (tryb testowy)', 'success');
-        setTimeout(() => {
-            currentUser = null;
-            window.ticketMode = false;
-            showView('department');
-            showNotification('Powrót do menu głównego', 'info');
-        }, 2000);
-        return;
-    }
-    
-    // Wywołanie backendu
-    console.log('Wysyłam ticket do backendu:', {
-        login: currentUser.login,
-        title,
-        description,
-        location,
-        priority,
-        category
-    });
-    
-    // Zapisz dane przed resetem
     const userLogin = currentUser.login;
-    const userName = currentUser.name;
-    
-    // 1. NATYCHMIAST - pokaż sukces
+    const userName  = currentUser.name;
+
+    // 1. NATYCHMIAST - pokaż sukces i wróć
     showNotification('✅ Zgłoszenie wysłane! Kierownik zostanie powiadomiony.', 'success');
-    
-    // 2. NATYCHMIAST - wróć do głównego widoku
-    setTimeout(() => {
+    setTimeout(function() {
         currentUser = null;
         window.ticketMode = false;
         showView('department');
         ensureCodeInputFocus();
     }, 500);
-    
-    // 3. W TLE - zapisz i odśwież liczniki
-    google.script.run
-        .withSuccessHandler(function(result) {
+
+    // 2. W TLE - zapisz i odśwież liczniki
+    apiSubmitTicket(userLogin, userName, category, title, description, location, priority)
+        .then(function(result) {
             if (result.success) {
-                console.log('✅ Ticket zapisany');
                 updateTicketsNotificationBadge();
                 updateCriticalTicketsBadge();
             } else {
                 showNotification('⚠️ ' + result.message, 'error');
             }
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
             console.error('Błąd zgłoszenia:', error);
             showNotification('⚠️ Błąd połączenia', 'error');
-        })
-        .submitTicket(userLogin, userName, category, title, description, location, priority);
+        });
 };
 
 /**
