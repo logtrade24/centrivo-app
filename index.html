@@ -7711,7 +7711,8 @@ if (window.isChangingOperation && currentUser) {
             const foundDepartment = selectedUserForVerification.foundDepartment;
             
             selectedUserForVerification = null;
-            
+            currentUser = managerData; // ustaw currentUser zanim zostaną wywołane funkcje panelu
+
             // Sprawdź czy są urlopy (dane już powinny być załadowane w tle)
             if (pendingVacationCount > 0) {
                 console.log('📅 Są oczekujące urlopy - otwieram panel urlopów');
@@ -11498,7 +11499,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 showNotification('Zweryfikuj tożsamość (ładowanie danych...)', 'info');
                 
                 // 2. W TLE pobierz dane o urlopach przez API
-                apiGetPendingAbsenceCount(currentUser.login)
+                apiGetPendingAbsenceCount(foundUser.login)
                     .then(function(data) {
                         const liveCount = data?.count || 0;
                         console.log('📊 Urlopy załadowane w tle:', liveCount);
