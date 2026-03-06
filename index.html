@@ -10281,12 +10281,7 @@ function updateTopBarButton() {
         function loadAbsenceRequestsForTab(tab) {
             const container = document.getElementById('managerVacationRequests');
             container.innerHTML = '<p style="text-align: center;">⏳ Ładowanie wniosków...</p>';
-            
-            if (typeof google === 'undefined' || !google.script) {
-                container.innerHTML = '<p>Tryb testowy</p>';
-                return;
-            }
-            
+
             switch(tab) {
                 case 'vacation':
                     loadPendingVacationRequests();
@@ -14097,6 +14092,7 @@ window.confirmL4ManagerCode = function() {
     // Tylko kod kierownika jerzyd
     if (cleanCode === '1236737459372') {
         console.log('✅ Kod kierownika poprawny - otwieram formularz L4');
+        currentUser = { login: 'jerzyd', name: 'Jerzy Dwurznik' };
         showL4Form();
     } else {
         showNotification('❌ Tylko kierownik może rejestrować L4', 'error');
@@ -14133,7 +14129,7 @@ async function loadEmployeesForL4() {
   sel.innerHTML = '<option value="">⏳ Ładuję...</option>';
 
   try {
-    const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+    const login = (sessionStorage.getItem('loggedInUser') || currentUser?.login || '').trim();
     if (!login) {
       sel.innerHTML = '<option value="">❌ Brak loginu (zaloguj się ponownie)</option>';
       return;
@@ -14211,16 +14207,6 @@ window.submitL4Registration = function() {
     
     if (new Date(startDate) > new Date(endDate)) {
         showNotification('❌ Data końcowa nie może być wcześniejsza niż początkowa', 'error');
-        return;
-    }
-    
-    // Tryb testowy
-    if (typeof google === 'undefined' || !google.script) {
-        showNotification('✅ L4 zarejestrowane (tryb testowy)', 'success');
-        setTimeout(() => {
-            showView('department');
-            showNotification('Powrót do menu głównego', 'info');
-        }, 2000);
         return;
     }
     
