@@ -7042,7 +7042,22 @@ function focusEanInput(retries = 20, delay = 150) {
                 .catch(function(e) { console.error('Błąd badge ticketów:', e); });
         }
 
-        // ===== LICZNIK NIEODCZYTANYCH ODPOWIEDZI (dla pracownika) =====
+        // ===== SPRAWDŹ NIEPRZECZYTANE ODPOWIEDZI + POKAŻ MODAL (dla pracownika) =====
+        function checkUnreadTicketReplies(login) {
+            if (!login) return;
+            apiGetUnreadTicketReplies(login)
+                .then(function(data) {
+                    unreadTicketRepliesCount = data?.count || 0;
+                    updateMyTicketsTileInActionView();
+                    if (unreadTicketRepliesCount > 0) {
+                        var userName = (currentUser && currentUser.name) || login;
+                        showUnreadTicketsModal(userName, unreadTicketRepliesCount);
+                    }
+                })
+                .catch(function(e) { console.error('Błąd nieodczytanych odpowiedzi:', e); });
+        }
+
+        // ===== LICZNIK NIEODCZYTANYCH ODPOWIEDZI — tylko badge (autorefresh) =====
         function updateUnreadTicketRepliesBadge(userLogin) {
             if (!userLogin) return;
             apiGetUnreadTicketReplies(userLogin)
@@ -11654,13 +11669,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                     showView('action');
                     updateButtonStates();
                     updateMyTicketsTileInActionView();
-                    
-                    apiGetUnreadTicketReplies(currentUser.login)
-                        .then(function(data) {
-                            unreadTicketRepliesCount = data?.count || 0;
-                            updateMyTicketsTileInActionView();
-                        })
-                        .catch(function(e) { console.error('Błąd unread tickets:', e); });
+                    checkUnreadTicketReplies(currentUser.login);
 
                     showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
                 }
@@ -11680,18 +11689,8 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                                 if (criticalTicketsCount > 0) {
                                     showCriticalTicketsModal();
                                 }
-                            } else {
-                                // Nie-kierownik (403) - sprawdź nieodczytane odpowiedzi
-                                apiGetUnreadTicketReplies(foundUser.login)
-                                    .then(function(d) {
-                                        unreadTicketRepliesCount = d?.count || 0;
-                                        updateMyTicketsTileInActionView();
-                                        if (unreadTicketRepliesCount > 0) {
-                                            showUnreadTicketsModal(foundUser.name, unreadTicketRepliesCount);
-                                        }
-                                    })
-                                    .catch(function(e) { console.error('Błąd nieodczytanych ticketów:', e); });
                             }
+                            // Nie-kierownik (403) — unread replies sprawdzone już w proceedToActionView
                         })
                         .catch(function(e) { console.error('Błąd ticketów w tle:', e); });
                 }
