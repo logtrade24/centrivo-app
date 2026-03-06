@@ -6980,7 +6980,6 @@ function focusEanInput(retries = 20, delay = 150) {
         let openTicketsCount = 0;
         let unreadTicketRepliesCount = 0;  // Nieodczytane odpowiedzi dla pracownika
         let criticalTicketsCount = 0;      // Krytyczne tickety dla kierownika
-        let currentUserIsManager = false;  // Czy aktualnie zalogowany user jest kierownikiem
         // ===== CACHE OGŁOSZEŃ =====
         let announcementsCache = {};
         let announcementsCacheLoaded = false;
@@ -7194,7 +7193,7 @@ function focusEanInput(retries = 20, delay = 150) {
               }
               
               // KIEROWNIK - pokaż kafelek zarządzania
-              if (currentUserIsManager) {
+              if (currentUser.login === 'jerzyd') {
                   if (myTicketsBtn) myTicketsBtn.style.display = 'none';
                   
                   if (managerTicketsBtn) {
@@ -11433,7 +11432,6 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                   name: data.name,
                   status: data.status // ważne, bo proceedToActionView w DBK mapuje status
                 };
-                currentUserIsManager = false;
                 unreadTicketRepliesCount = 0;
             
                 currentDepartment = data.currentDepartment || null;
@@ -11677,7 +11675,6 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                         .then(function(data) {
                             if (data.success) {
                                 // Kierownik
-                                currentUserIsManager = true;
                                 criticalTicketsCount = data.count || 0;
                                 updateMyTicketsTileInActionView();
                                 if (criticalTicketsCount > 0) {
@@ -11685,7 +11682,6 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                                 }
                             } else {
                                 // Nie-kierownik (403) - sprawdź nieodczytane odpowiedzi
-                                currentUserIsManager = false;
                                 apiGetUnreadTicketReplies(foundUser.login)
                                     .then(function(d) {
                                         unreadTicketRepliesCount = d?.count || 0;
