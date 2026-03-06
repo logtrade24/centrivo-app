@@ -3123,7 +3123,7 @@ body.dark-mode .report-kpi-card { color: #e5e7eb; } /* dark */
                     </div>
                     
                     <!-- KAFELEK "MOJE ZGŁOSZENIA" (tylko dla pracowników) -->
-                    <div class="tile" id="my-tickets-btn" onclick="showMyTicketsView()" 
+                    <div class="tile" id="my-tickets-btn" onclick="openMyTickets()"
                         style="background: linear-gradient(45deg, #9c27b0, #673ab7); position: relative; display: none;">
                         🎫 Moje zgłoszenia
                     </div>
@@ -7048,9 +7048,7 @@ function focusEanInput(retries = 20, delay = 150) {
             apiGetUnreadTicketReplies(userLogin)
                 .then(function(data) {
                     unreadTicketRepliesCount = data?.count || 0;
-                    if (currentView === 'action') {
-                        updateMyTicketsTileInActionView();
-                    }
+                    updateMyTicketsTileInActionView();
                 })
                 .catch(function(e) { console.error('Błąd nieodczytanych ticketów:', e); });
         }
@@ -12183,7 +12181,12 @@ function loadAllTickets() {
 
     apiGetAllTickets(managerLogin, currentTicketFilter)
         .then(function(data) {
-            const tickets = data?.tickets || [];
+            if (!data.success) {
+                container.innerHTML = '<p style="color: red; text-align: center;">Błąd: ' + (data.message || 'Nieznany') + ' — <button onclick="loadAllTickets()" style="margin-left:8px;">Spróbuj ponownie</button></p>';
+                return;
+            }
+
+            const tickets = data.tickets || [];
 
             if (tickets.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #666;">Brak zgłoszeń</p>';
@@ -12198,7 +12201,7 @@ function loadAllTickets() {
         })
         .catch(function(error) {
             console.error('Błąd ładowania ticketów:', error);
-            container.innerHTML = '<p style="color: red; text-align: center;">Błąd: ' + (error.message || 'Nieznany') + '</p>';
+            container.innerHTML = '<p style="color: red; text-align: center;">Błąd: ' + (error.message || 'Nieznany') + ' — <button onclick="loadAllTickets()" style="margin-left:8px;">Spróbuj ponownie</button></p>';
         });
 }
 
@@ -12510,6 +12513,14 @@ function changeTicketStatus(newStatus) {
         /**
          * Pokazuje panel "Moje zgłoszenia" pracownika
          */
+        function openMyTickets() {
+            if (unreadTicketRepliesCount > 0 && currentUser) {
+                showUnreadTicketsModal(currentUser.name, unreadTicketRepliesCount);
+            } else {
+                showMyTicketsView();
+            }
+        }
+
         function showMyTicketsView() {
             document.getElementById('unreadTicketsModal').classList.remove('show');
             showView('myTickets');
