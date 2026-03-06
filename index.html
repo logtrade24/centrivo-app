@@ -14004,38 +14004,36 @@ window.selectTicketCategory = function(category) {
 /**
  * Weryfikacja kodu dla ticketu
  */
-window.confirmTicketUserCode = function() {
+window.confirmTicketUserCode = async function() {
     const inputCode = document.getElementById('ticketVerificationCodeInput').value.trim();
-    
+
     if (!inputCode) {
         showNotification('Wpisz kod EAN', 'error');
         return;
     }
-    
+
     const cleanCode = inputCode.replace(/^~+/, '').replace(/~+$/, '').trim();
     console.log('Weryfikacja ticketu - kod:', cleanCode);
-    
-    // Znajdź użytkownika po kodzie
-    let foundUser = null;
-    for (const [deptId, dept] of Object.entries(departments)) {
-        const user = dept.users.find(u => {
-            const storedCode = u.code.toString().replace(/^~+/, '').replace(/~+$/, '').trim();
-            return storedCode === cleanCode;
+
+    try {
+        const r = await fetch(`${API_BASE}/employee/by-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: cleanCode })
         });
-        if (user) {
-            foundUser = user;
-            break;
+        const data = await r.json().catch(() => ({}));
+        if (data.success && data.login) {
+            currentUser = { login: data.login, name: data.name, code: cleanCode };
+            showTicketForm();
+            showNotification('Weryfikacja pomyślna - wypełnij formularz', 'success');
+        } else {
+            showNotification('Nieprawidłowy kod EAN', 'error');
+            document.getElementById('ticketVerificationCodeInput').value = '';
+            document.getElementById('ticketVerificationCodeInput').focus();
         }
-    }
-    
-    if (foundUser) {
-        currentUser = foundUser;
-        showTicketForm();
-        showNotification('Weryfikacja pomyślna - wypełnij formularz', 'success');
-    } else {
-        showNotification('Nieprawidłowy kod EAN', 'error');
-        document.getElementById('ticketVerificationCodeInput').value = '';
-        document.getElementById('ticketVerificationCodeInput').focus();
+    } catch (e) {
+        console.error('Błąd weryfikacji kodu:', e);
+        showNotification('Błąd połączenia z serwerem', 'error');
     }
 };
 
