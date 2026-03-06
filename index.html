@@ -6980,6 +6980,7 @@ function focusEanInput(retries = 20, delay = 150) {
         let openTicketsCount = 0;
         let unreadTicketRepliesCount = 0;  // Nieodczytane odpowiedzi dla pracownika
         let criticalTicketsCount = 0;      // Krytyczne tickety dla kierownika
+        let unreadRepliesPromise = null;   // Pre-fetch nieodczytanych — startuje przy skanie
         // ===== CACHE OGŁOSZEŃ =====
         let announcementsCache = {};
         let announcementsCacheLoaded = false;
@@ -7045,16 +7046,24 @@ function focusEanInput(retries = 20, delay = 150) {
         // ===== SPRAWDŹ NIEPRZECZYTANE ODPOWIEDZI + POKAŻ MODAL (dla pracownika) =====
         function checkUnreadTicketReplies(login) {
             if (!login) return;
-            apiGetUnreadTicketReplies(login)
-                .then(function(data) {
-                    unreadTicketRepliesCount = data?.count || 0;
-                    updateMyTicketsTileInActionView();
-                    if (unreadTicketRepliesCount > 0) {
-                        var userName = (currentUser && currentUser.name) || login;
-                        showUnreadTicketsModal(userName, unreadTicketRepliesCount);
+            // Użyj pre-fetch promise jeśli dostępny (startował przy skanie EAN)
+            var p = unreadRepliesPromise || apiGetUnreadTicketReplies(login);
+            unreadRepliesPromise = null;
+            p.then(function(data) {
+                unreadTicketRepliesCount = data?.count || 0;
+                updateMyTicketsTileInActionView();
+                if (unreadTicketRepliesCount > 0) {
+                    // DOM bezpośrednio — showUnreadTicketsModal jest w innym scope
+                    var modal = document.getElementById('unreadTicketsModal');
+                    if (modal) {
+                        var nameEl = document.getElementById('unreadTicketsUserName');
+                        var countEl = document.getElementById('unreadTicketsCount');
+                        if (nameEl) nameEl.textContent = (currentUser && currentUser.name) || login;
+                        if (countEl) countEl.textContent = unreadTicketRepliesCount;
+                        modal.classList.add('show');
                     }
-                })
-                .catch(function(e) { console.error('Błąd nieodczytanych odpowiedzi:', e); });
+                }
+            }).catch(function(e) { console.error('Błąd nieodczytanych odpowiedzi:', e); });
         }
 
         // ===== LICZNIK NIEODCZYTANYCH ODPOWIEDZI — tylko badge (autorefresh) =====
@@ -11448,6 +11457,8 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                   status: data.status // ważne, bo proceedToActionView w DBK mapuje status
                 };
                 unreadTicketRepliesCount = 0;
+                // Prefetch — startuje natychmiast przy skanie, wynik gotowy gdy panel się otworzy
+                unreadRepliesPromise = apiGetUnreadTicketReplies(data.login);
             
                 currentDepartment = data.currentDepartment || null;
             
