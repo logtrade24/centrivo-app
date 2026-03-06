@@ -10207,6 +10207,12 @@ function updateTopBarButton() {
         const requests = res?.requests || [];
         currentUserVacationRequests = requests;
 
+        // Cache dla PDF — uzupełnij login i name z aktualnego użytkownika
+        window.vacationRequestsCache = window.vacationRequestsCache || {};
+        requests.forEach(r => {
+          window.vacationRequestsCache[r.id] = Object.assign({ login: login, name: (currentUser && currentUser.name) || login }, r);
+        });
+
         if (!requests.length) {
           container.innerHTML = '<p style="text-align: center; color: #666;">Brak złożonych wniosków</p>';
           return;
@@ -11873,260 +11879,14 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
          * Pobiera PDF dla wniosku o dzień wolny
          */
         function downloadDayOffPDF(requestId) {
-            console.log('Generowanie PDF dla dnia wolnego:', requestId);
-            showNotification('Generowanie PDF...', 'info');
-            
-            if (typeof google === 'undefined' || !google.script) {
-                showNotification('PDF niedostępne w trybie testowym', 'error');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
-                    console.log('Wynik generowania PDF:', result);
-                    
-                    if (result.success) {
-                        if (!result.downloadUrl) {
-                            showNotification('Błąd: Brak URL do pobrania PDF', 'error');
-                            return;
-                        }
-                        
-                        const newWindow = window.open(result.downloadUrl, '_blank');
-                        
-                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            const linkHTML = `
-                                <div style="position: fixed; top: 100px; right: 20px; background: white; 
-                                            padding: 20px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
-                                            z-index: 10000; max-width: 400px;">
-                                    <h3 style="margin: 0 0 15px 0;">📄 PDF jest gotowy!</h3>
-                                    <p style="margin-bottom: 15px;">Kliknij poniższy link aby pobrać:</p>
-                                    <a href="${result.downloadUrl}" target="_blank" 
-                                       style="display: inline-block; background: #2196f3; color: white; 
-                                              padding: 12px 24px; text-decoration: none; border-radius: 6px; 
-                                              font-weight: bold;">
-                                        📥 Pobierz PDF
-                                    </a>
-                                    <button onclick="this.parentElement.remove()" 
-                                            style="display: block; margin-top: 15px; background: #6c757d; 
-                                                   color: white; border: none; padding: 8px 16px; 
-                                                   border-radius: 4px; cursor: pointer;">
-                                        Zamknij
-                                    </button>
-                                </div>
-                            `;
-                            
-                            const linkDiv = document.createElement('div');
-                            linkDiv.innerHTML = linkHTML;
-                            document.body.appendChild(linkDiv);
-                            
-                            showNotification('PDF gotowy - kliknij link aby pobrać', 'info');
-                        } else {
-                            showNotification('PDF wygenerowany! Otwarto w nowej karcie', 'success');
-                        }
-                    } else {
-                        showNotification('Błąd generowania PDF: ' + (result.message || 'Nieznany błąd'), 'error');
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    console.error('Błąd generowania PDF:', error);
-                    showNotification('Błąd: ' + error.message, 'error');
-                })
-                .generateDayOffPDF(requestId);
+            showNotification('PDF dla dni wolnych będzie dostępny wkrótce', 'info');
         }
 
         /**
          * Pobiera PDF dla urlopu okolicznościowego
          */
         function downloadOccasionalLeavePDF(requestId) {
-            console.log('Generowanie PDF dla urlopu okolicznościowego:', requestId);
-            showNotification('Generowanie PDF...', 'info');
-            
-            if (typeof google === 'undefined' || !google.script) {
-                showNotification('PDF niedostępne w trybie testowym', 'error');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
-                    console.log('Wynik generowania PDF:', result);
-                    
-                    if (result.success) {
-                        if (!result.downloadUrl) {
-                            showNotification('Błąd: Brak URL do pobrania PDF', 'error');
-                            return;
-                        }
-                        
-                        const newWindow = window.open(result.downloadUrl, '_blank');
-                        
-                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            const linkHTML = `
-                                <div style="position: fixed; top: 100px; right: 20px; background: white; 
-                                            padding: 20px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
-                                            z-index: 10000; max-width: 400px;">
-                                    <h3 style="margin: 0 0 15px 0;">📄 PDF jest gotowy!</h3>
-                                    <p style="margin-bottom: 15px;">Kliknij poniższy link aby pobrać:</p>
-                                    <a href="${result.downloadUrl}" target="_blank" 
-                                       style="display: inline-block; background: #9c27b0; color: white; 
-                                              padding: 12px 24px; text-decoration: none; border-radius: 6px; 
-                                              font-weight: bold;">
-                                        📥 Pobierz PDF
-                                    </a>
-                                    <button onclick="this.parentElement.remove()" 
-                                            style="display: block; margin-top: 15px; background: #6c757d; 
-                                                   color: white; border: none; padding: 8px 16px; 
-                                                   border-radius: 4px; cursor: pointer;">
-                                        Zamknij
-                                    </button>
-                                </div>
-                            `;
-                            
-                            const linkDiv = document.createElement('div');
-                            linkDiv.innerHTML = linkHTML;
-                            document.body.appendChild(linkDiv);
-                            
-                            showNotification('PDF gotowy - kliknij link aby pobrać', 'info');
-                        } else {
-                            showNotification('PDF wygenerowany! Otwarto w nowej karcie', 'success');
-                        }
-                    } else {
-                        showNotification('Błąd generowania PDF: ' + (result.message || 'Nieznany błąd'), 'error');
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    console.error('Błąd generowania PDF:', error);
-                    showNotification('Błąd: ' + error.message, 'error');
-                })
-                .generateOccasionalLeavePDF(requestId);
-        }
-
-        /**
-         * Pobiera PDF dla wniosku o dzień wolny
-         */
-        function downloadDayOffPDF(requestId) {
-            console.log('Generowanie PDF dla dnia wolnego:', requestId);
-            showNotification('Generowanie PDF...', 'info');
-            
-            if (typeof google === 'undefined' || !google.script) {
-                showNotification('PDF niedostępne w trybie testowym', 'error');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
-                    console.log('Wynik generowania PDF:', result);
-                    
-                    if (result.success) {
-                        if (!result.downloadUrl) {
-                            showNotification('Błąd: Brak URL do pobrania PDF', 'error');
-                            return;
-                        }
-                        
-                        const newWindow = window.open(result.downloadUrl, '_blank');
-                        
-                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            const linkHTML = `
-                                <div style="position: fixed; top: 100px; right: 20px; background: white; 
-                                            padding: 20px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
-                                            z-index: 10000; max-width: 400px;">
-                                    <h3 style="margin: 0 0 15px 0;">📄 PDF jest gotowy!</h3>
-                                    <p style="margin-bottom: 15px;">Kliknij poniższy link aby pobrać:</p>
-                                    <a href="${result.downloadUrl}" target="_blank" 
-                                       style="display: inline-block; background: #4caf50; color: white; 
-                                              padding: 12px 24px; text-decoration: none; border-radius: 6px; 
-                                              font-weight: bold;">
-                                        📥 Pobierz PDF
-                                    </a>
-                                    <button onclick="this.parentElement.remove()" 
-                                            style="display: block; margin-top: 15px; background: #6c757d; 
-                                                   color: white; border: none; padding: 8px 16px; 
-                                                   border-radius: 4px; cursor: pointer;">
-                                        Zamknij
-                                    </button>
-                                </div>
-                            `;
-                            
-                            const linkDiv = document.createElement('div');
-                            linkDiv.innerHTML = linkHTML;
-                            document.body.appendChild(linkDiv);
-                            
-                            showNotification('PDF gotowy - kliknij link aby pobrać', 'info');
-                        } else {
-                            showNotification('PDF wygenerowany! Otwarto w nowej karcie', 'success');
-                        }
-                    } else {
-                        showNotification('Błąd generowania PDF: ' + (result.message || 'Nieznany błąd'), 'error');
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    console.error('Błąd generowania PDF:', error);
-                    showNotification('Błąd: ' + error.message, 'error');
-                })
-                .generateDayOffPDF(requestId);
-        }
-
-        /**
-         * Pobiera PDF dla urlopu okolicznościowego
-         */
-        function downloadOccasionalLeavePDF(requestId) {
-            console.log('Generowanie PDF dla urlopu okolicznościowego:', requestId);
-            showNotification('Generowanie PDF...', 'info');
-            
-            if (typeof google === 'undefined' || !google.script) {
-                showNotification('PDF niedostępne w trybie testowym', 'error');
-                return;
-            }
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
-                    console.log('Wynik generowania PDF:', result);
-                    
-                    if (result.success) {
-                        if (!result.downloadUrl) {
-                            showNotification('Błąd: Brak URL do pobrania PDF', 'error');
-                            return;
-                        }
-                        
-                        const newWindow = window.open(result.downloadUrl, '_blank');
-                        
-                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            const linkHTML = `
-                                <div style="position: fixed; top: 100px; right: 20px; background: white; 
-                                            padding: 20px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
-                                            z-index: 10000; max-width: 400px;">
-                                    <h3 style="margin: 0 0 15px 0;">📄 PDF jest gotowy!</h3>
-                                    <p style="margin-bottom: 15px;">Kliknij poniższy link aby pobrać:</p>
-                                    <a href="${result.downloadUrl}" target="_blank" 
-                                       style="display: inline-block; background: #9c27b0; color: white; 
-                                              padding: 12px 24px; text-decoration: none; border-radius: 6px; 
-                                              font-weight: bold;">
-                                        📥 Pobierz PDF
-                                    </a>
-                                    <button onclick="this.parentElement.remove()" 
-                                            style="display: block; margin-top: 15px; background: #6c757d; 
-                                                   color: white; border: none; padding: 8px 16px; 
-                                                   border-radius: 4px; cursor: pointer;">
-                                        Zamknij
-                                    </button>
-                                </div>
-                            `;
-                            
-                            const linkDiv = document.createElement('div');
-                            linkDiv.innerHTML = linkHTML;
-                            document.body.appendChild(linkDiv);
-                            
-                            showNotification('PDF gotowy - kliknij link aby pobrać', 'info');
-                        } else {
-                            showNotification('PDF wygenerowany! Otwarto w nowej karcie', 'success');
-                        }
-                    } else {
-                        showNotification('Błąd generowania PDF: ' + (result.message || 'Nieznany błąd'), 'error');
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    console.error('Błąd generowania PDF:', error);
-                    showNotification('Błąd: ' + error.message, 'error');
-                })
-                .generateOccasionalLeavePDF(requestId);
+            showNotification('PDF dla urlopów okolicznościowych będzie dostępny wkrótce', 'info');
         }
 
         function isWorkforcePlannerOpenNow() {
