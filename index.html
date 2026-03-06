@@ -11429,7 +11429,44 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
             
                 // Potrzebne do systemu ogłoszeń (markAsReadAndContinue używa tego loginu)
                 sessionStorage.setItem('currentEmployeeLogin', currentUser.login);
-            
+
+                // ===== KIEROWNIK - ZOPTYMALIZOWANY FLOW (API) =====
+                if (data.login === 'jerzyd') {
+                    console.log('🚀 Kierownik zeskanowany - NATYCHMIAST pokazuję weryfikację');
+                    selectedUserForVerification = {
+                        login: data.login,
+                        name: data.name,
+                        isManagerAccess: true,
+                        managerData: { login: data.login, name: data.name, status: data.status, currentDepartment: data.currentDepartment || null },
+                        foundDepartment: data.currentDepartment || null
+                    };
+                    currentUser = null; // nie ustawiaj jeszcze — dopiero po weryfikacji
+
+                    document.getElementById('selectedUserName').textContent = data.name;
+                    document.getElementById('selectedDepartmentName').textContent = 'Panel Kierownika';
+                    showView('verification');
+                    setTimeout(function() {
+                        const vi = document.getElementById('verificationCodeInput');
+                        if (vi) { vi.value = ''; vi.focus(); }
+                    }, 100);
+                    showNotification('Zweryfikuj tożsamość (ładowanie danych...)', 'info');
+
+                    apiGetPendingAbsenceCount('jerzyd')
+                        .then(function(countData) {
+                            const liveCount = countData?.count || 0;
+                            pendingVacationCount = liveCount;
+                            updateManagerNotificationBadge();
+                            if (liveCount > 0) {
+                                showNotification('Zweryfikuj tożsamość (' + liveCount + ' oczekujących wniosków)', 'info');
+                            } else {
+                                showNotification('Zweryfikuj tożsamość aby kontynuować', 'info');
+                            }
+                        })
+                        .catch(function(error) { console.error('❌ Błąd sprawdzania urlopów:', error); });
+                    return;
+                }
+                // ===== KONIEC KIEROWNIK =====
+
                 // Funkcja 1:1 jak DBK — wejście do panelu operatora
                 function proceedToActionViewApi() {
                   // mapowanie statusu na workerState (1:1 jak w proceedToActionView w pliku)
