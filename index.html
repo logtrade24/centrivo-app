@@ -7057,9 +7057,12 @@ function focusEanInput(retries = 20, delay = 150) {
 
         // ===== LICZNIK KRYTYCZNYCH TICKETÓW (dla kierownika) =====
         function updateCriticalTicketsBadge() {
-            apiGetCriticalTicketsCount('jerzyd')
+            const login = (currentUser && currentUser.login) || '';
+            if (!login) return;
+            apiGetCriticalTicketsCount(login)
                 .then(function(data) {
-                    criticalTicketsCount = data?.count || 0;
+                    if (!data.success) return; // 403 gdy nie-kierownik
+                    criticalTicketsCount = data.count || 0;
                     updateTicketsButtonStyle();
                 })
                 .catch(function(e) { console.error('Błąd krytycznych ticketów:', e); });
@@ -7355,7 +7358,8 @@ function closeCriticalTicketsModal() {
             // ===== POKAŻ MODAL KRYTYCZNYCH TICKETÓW =====
             function showCriticalTicketsModal() {
                 // Pobierz szczegóły pierwszego krytycznego ticketu
-                apiGetCriticalTickets('jerzyd')
+                const managerLogin = (currentUser && currentUser.login) || '';
+                apiGetCriticalTickets(managerLogin)
                     .then(function(data) {
                         const criticalTickets = data?.tickets || [];
                             if (criticalTickets && criticalTickets.length > 0) {
@@ -11669,26 +11673,29 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 
                 // Funkcja pomocnicza - sprawdź tickety w tle (nie blokuje)
                 function checkTicketsInBackground() {
-                    if (foundUser.login === 'jerzyd') {
-                        apiGetCriticalTicketsCount('jerzyd')
-                            .then(function(data) {
-                                criticalTicketsCount = data?.count || 0;
+                    // Sprawdź krytyczne tickety - API zwróci 403 jeśli user nie jest kierownikiem
+                    apiGetCriticalTicketsCount(foundUser.login)
+                        .then(function(data) {
+                            if (data.success) {
+                                // Kierownik
+                                criticalTicketsCount = data.count || 0;
                                 if (criticalTicketsCount > 0) {
                                     showCriticalTicketsModal();
                                 }
-                            })
-                            .catch(function(e) { console.error('Błąd krytycznych ticketów:', e); });
-                    } else {
-                        apiGetUnreadTicketReplies(foundUser.login)
-                            .then(function(data) {
-                                unreadTicketRepliesCount = data?.count || 0;
-                                updateMyTicketsTileInActionView();
-                                if (unreadTicketRepliesCount > 0) {
-                                    showUnreadTicketsModal(foundUser.name, unreadTicketRepliesCount);
-                                }
-                            })
-                            .catch(function(e) { console.error('Błąd nieodczytanych ticketów:', e); });
-                    }
+                            } else {
+                                // Nie-kierownik (403) - sprawdź nieodczytane odpowiedzi
+                                apiGetUnreadTicketReplies(foundUser.login)
+                                    .then(function(d) {
+                                        unreadTicketRepliesCount = d?.count || 0;
+                                        updateMyTicketsTileInActionView();
+                                        if (unreadTicketRepliesCount > 0) {
+                                            showUnreadTicketsModal(foundUser.name, unreadTicketRepliesCount);
+                                        }
+                                    })
+                                    .catch(function(e) { console.error('Błąd nieodczytanych ticketów:', e); });
+                            }
+                        })
+                        .catch(function(e) { console.error('Błąd ticketów w tle:', e); });
                 }
                 
                 // SPRAWDŹ OGŁOSZENIA - NAJPIERW PRELOADED CACHE (natychmiastowe)
@@ -12114,9 +12121,9 @@ let currentTicketDetails = null;
             const deptName = departmentNames[currentDepartment] || currentDepartment;
             
             // Sprawdź krytyczne tickety
-            apiGetCriticalTicketsCount('jerzyd')
+            apiGetCriticalTicketsCount(managerData.login)
                 .then(function(data) {
-                    criticalTicketsCount = data?.count || 0;
+                    criticalTicketsCount = (data.success && data.count) || 0;
 
                     if (criticalTicketsCount > 0) {
                         showCriticalTicketsModal();
