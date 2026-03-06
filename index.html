@@ -7402,37 +7402,36 @@ function closeCriticalTicketsModal() {
     
     autoRefreshInterval = setInterval(() => {
         console.log('⏰ Auto-refresh wykonany o:', new Date().toLocaleTimeString());
-        
+
         if (typeof google !== 'undefined' && google.script) {
-            
             // Zawsze sprawdzaj licznik ticketów (niezależnie od widoku)
             updateTicketsNotificationBadge();
             updateCriticalTicketsBadge();
-            
-            // ✅ NOWE: Odświeżaj cache ogłoszeń dla wszystkich pracowników
+
+            // Odświeżaj cache ogłoszeń dla wszystkich pracowników
             preloadAllAnnouncementsCache();
-                  
-                  // Jeśli użytkownik jest zalogowany - sprawdź jego nieodczytane odpowiedzi
-                  if (currentUser && currentUser.login) {
-                      updateUnreadTicketRepliesBadge(currentUser.login); // ← DODANE
-                  }
-                  
-                  // Inne odświeżania w zależności od widoku
-                  if (currentView === 'vacation' && currentUser) {
-                      showAutoRefreshIndicator();
-                      loadUserVacationRequests(currentUser.login);
-                      loadVacationBalance();
-                  } 
-                  else if (currentView === 'managerVacation') {
-                      // Wyłączone auto-odświeżanie w panelu kierownika
-                      // żeby nie przeszkadzało przy zatwierdzaniu wniosków
-                      updateAbsenceTabCounts(); // tylko liczniki, bez przeładowania listy
-                  }
-                  else if (currentUser && currentUser.login === 'jerzyd') {
-                      updateManagerNotificationBadge();
-                  }
-              }
-          }, 60000);
+
+            // Jeśli użytkownik jest zalogowany - sprawdź jego nieodczytane odpowiedzi
+            if (currentUser && currentUser.login) {
+                updateUnreadTicketRepliesBadge(currentUser.login);
+            }
+        }
+
+        // Odświeżanie urlopów / badge - działa zawsze (API i Apps Script)
+        if (currentView === 'vacation' && currentUser) {
+            showAutoRefreshIndicator();
+            loadUserVacationRequests(currentUser.login);
+            loadVacationBalance();
+        }
+        else if (currentView === 'managerVacation') {
+            // Wyłączone auto-odświeżanie w panelu kierownika
+            // żeby nie przeszkadzało przy zatwierdzaniu wniosków
+            updateAbsenceTabCounts(); // tylko liczniki, bez przeładowania listy
+        }
+        else {
+            updateManagerNotificationBadge();
+        }
+    }, 60000);
       }
 
         function stopAutoRefresh() {
@@ -7627,8 +7626,52 @@ if (window.isChangingOperation && currentUser) {
                         showVacationPlanning(userLogin);
                         return;
                     }
-        
-                    // normalny przepływ (bez google.script.run)
+
+                    // Specjalna obsługa kierownika - sprawdź wnioski przed weryfikacją
+                    if (userLogin === 'jerzyd') {
+                        let managerUser = null;
+                        let managerDept = null;
+                        for (const [deptId, dept] of Object.entries(departments)) {
+                            const u = dept.users.find(u => u.login === 'jerzyd');
+                            if (u) { managerUser = u; managerDept = deptId; break; }
+                        }
+                        const managerName = managerUser ? managerUser.name : 'Jerzy Dwurznik';
+
+                        apiGetPendingAbsenceCount('jerzyd')
+                            .then(function(data) {
+                                pendingVacationCount = data?.count || 0;
+                                console.log('📊 Licznik zaktualizowany:', pendingVacationCount);
+
+                                if (pendingVacationCount > 0) {
+                                    console.log('✅ Są oczekujące wnioski - panel kierownika');
+                                    selectedUserForVerification = {
+                                        login: 'jerzyd',
+                                        name: managerName,
+                                        isManagerAccess: true,
+                                        managerData: managerUser || { login: 'jerzyd', name: managerName },
+                                        foundDepartment: managerDept
+                                    };
+                                    document.getElementById('selectedUserName').textContent = managerName;
+                                    document.getElementById('selectedDepartmentName').textContent = 'Panel Kierownika';
+                                    showView('verification');
+                                    setTimeout(() => {
+                                        const verificationInput = document.getElementById('verificationCodeInput');
+                                        if (verificationInput) { verificationInput.value = ''; verificationInput.focus(); }
+                                    }, 100);
+                                    showNotification('Zweryfikuj tożsamość aby zarządzać urlopami', 'info');
+                                } else {
+                                    console.log('ℹ️ Brak oczekujących wniosków - normalny przepływ');
+                                    proceedWithNormalUserFlow(userLogin);
+                                }
+                            })
+                            .catch(function(error) {
+                                console.error('❌ Błąd sprawdzania wniosków:', error);
+                                proceedWithNormalUserFlow(userLogin);
+                            });
+                        return;
+                    }
+
+                    // normalny przepływ
                     proceedWithNormalUserFlow(userLogin);
                 };
         
@@ -11686,9 +11729,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         }
 
         function updateManagerNotificationBadge() {
-            if (!currentUser || !currentUser.login) return;
-
-            apiGetPendingAbsenceCount(currentUser.login)
+            apiGetPendingAbsenceCount('jerzyd')
                 .then(function(data) {
                     const count = data?.count || 0;
                     const oldCount = pendingVacationCount;
@@ -13973,12 +14014,12 @@ function refreshLiveWorkforce() {
             
             checkSession();
             
+            updateManagerNotificationBadge();
+            startAutoRefresh();
             if (hasAppsScript) {
-              updateManagerNotificationBadge();
-              startAutoRefresh();
               console.log('Rejestrator uruchomiony w Apps Script!');
             } else {
-              console.log('Tryb Cloudflare Pages: Apps Script wyłączony');
+              console.log('Rejestrator uruchomiony na Cloudflare Pages!');
             }
                 
            }); 
