@@ -10748,6 +10748,10 @@ function updateTopBarButton() {
             const tabCountEl = document.getElementById('count-vacation');
             if (tabCountEl) tabCountEl.textContent = requests.length;
 
+            // Cache dla PDF
+            window.vacationRequestsCache = window.vacationRequestsCache || {};
+            requests.forEach(r => { window.vacationRequestsCache[r.id] = r; });
+
             if (requests.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #666;">✅ Brak wniosków do zatwierdzenia</p>';
                 return;
@@ -11831,68 +11835,38 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
 
         function downloadVacationPDF(requestId) {
             console.log('Generowanie PDF dla wniosku:', requestId);
-            showNotification('Generowanie PDF...', 'info');
-            
-            if (typeof google === 'undefined' || !google.script) {
-                showNotification('PDF niedostępne w trybie testowym', 'error');
+
+            const requestData = (window.vacationRequestsCache || {})[requestId];
+            if (!requestData) {
+                showNotification('Błąd: brak danych wniosku w pamięci podręcznej', 'error');
                 return;
             }
-            
-            google.script.run
-                .withSuccessHandler(function(result) {
-                    console.log('Wynik generowania PDF:', result);
-                    
-                    if (result.success) {
-                        console.log('URL do pobrania:', result.downloadUrl);
-                        
-                        if (!result.downloadUrl) {
-                            showNotification('Błąd: Brak URL do pobrania PDF', 'error');
-                            return;
-                        }
-                        
-                        const newWindow = window.open(result.downloadUrl, '_blank');
-                        
-                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                            console.log('Wyskakujące okno zablokowane - tworzę link do pobrania');
-                            
-                            const linkHTML = `
-                                <div style="position: fixed; top: 100px; right: 20px; background: white; 
-                                            padding: 20px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
-                                            z-index: 10000; max-width: 400px;">
-                                    <h3 style="margin: 0 0 15px 0;">📄 PDF jest gotowy!</h3>
-                                    <p style="margin-bottom: 15px;">Kliknij poniższy link aby pobrać:</p>
-                                    <a href="${result.downloadUrl}" target="_blank" 
-                                       style="display: inline-block; background: #007bff; color: white; 
-                                              padding: 12px 24px; text-decoration: none; border-radius: 6px; 
-                                              font-weight: bold;">
-                                        📥 Pobierz PDF
-                                    </a>
-                                    <button onclick="this.parentElement.remove()" 
-                                            style="display: block; margin-top: 15px; background: #6c757d; 
-                                                   color: white; border: none; padding: 8px 16px; 
-                                                   border-radius: 4px; cursor: pointer;">
-                                        Zamknij
-                                    </button>
-                                </div>
-                            `;
-                            
-                            const linkDiv = document.createElement('div');
-                            linkDiv.innerHTML = linkHTML;
-                            document.body.appendChild(linkDiv);
-                            
-                            showNotification('PDF gotowy - kliknij link aby pobrać', 'info');
-                        } else {
-                            showNotification('PDF wygenerowany! Otwarto w nowej karcie', 'success');
-                        }
-                    } else {
-                        showNotification('Błąd generowania PDF: ' + (result.message || 'Nieznany błąd'), 'error');
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    console.error('Błąd generowania PDF:', error);
-                    showNotification('Błąd: ' + error.message, 'error');
-                })
-                .generateVacationRequestPDF(requestId);
+
+            showNotification('Generowanie PDF...', 'info');
+
+            fetch(`${API_BASE}/pdf/vacation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login: currentUser.login, requestData })
+            })
+            .then(function(r) {
+                if (!r.ok) return r.json().then(function(e) { throw new Error(e.message || 'HTTP ' + r.status); });
+                return r.blob();
+            })
+            .then(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a   = document.createElement('a');
+                a.href     = url;
+                a.download = `wniosek-urlopowy-${requestData.login || 'pracownik'}-${(requestData.dateFrom || '').replace(/\//g, '-')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+                showNotification('PDF pobrany!', 'success');
+            })
+            .catch(function(err) {
+                console.error('PDF download error:', err);
+                showNotification('Błąd pobierania PDF: ' + err.message, 'error');
+            });
         }
 
         /**
