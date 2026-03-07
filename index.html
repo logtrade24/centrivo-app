@@ -6117,7 +6117,7 @@ function wfFetchFromSystem(silent=false){
     btn.textContent = 'Pobieram...';
   }
 
-  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('loggedInUser') || '');
   apiWfGetAvailability(login, dept, mondayISO)
     .then(function(res){
       if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
@@ -6151,7 +6151,7 @@ function wfLoadDeptOptions(callback){
   sel.innerHTML = '<option value="ALL">Wszyscy (magazyn)</option>';
   sel.disabled = true;
 
-  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('loggedInUser') || '');
   apiWfGetDepartments(login)
     .then(function(res){
       const list = (res && res.success && Array.isArray(res.departments)) ? res.departments : ['ALL'];
@@ -6401,7 +6401,7 @@ function wfSaveSnapshot(){
 
   wfToast('⏳ Zapisuję plan...', true);
 
-  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('loggedInUser') || '');
   apiWfSavePlan(login, payload)
     .then(function(res){
       if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
@@ -6454,7 +6454,7 @@ function wfLoadSnapshot(){
 
   wfToast('⏳ Szukam zapisanego planu...', true);
 
-  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('loggedInUser') || '');
   apiWfGetPlan(login, dept, weekMonday)
     .then(function(res){
       if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
@@ -6478,7 +6478,7 @@ function wfCopyFromPreviousWeek(){
 
   wfToast('⏳ Szukam poprzedniego planu...', true);
 
-  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('loggedInUser') || '');
   apiWfGetPreviousPlan(login, dept, weekMonday)
     .then(function(res){
       if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
@@ -6554,7 +6554,7 @@ function wfLoadAgenciesToSelect(){
   if (note) note.innerHTML = '';
   wfAgencyStatus('', true);
 
-  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('loggedInUser') || '');
   apiWfGetAgencies(login)
     .then(function(res){
       wfAgenciesCache = (res && res.success && Array.isArray(res.agencies)) ? res.agencies : [];
@@ -6719,7 +6719,7 @@ function wfAgencySend(){
 
   wfAgencyStatus('⏳ Wysyłam...', true);
 
-  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('loggedInUser') || '');
   apiWfSendAgency(login, req)
     .then(function(res){
       if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
