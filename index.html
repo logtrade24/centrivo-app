@@ -6130,7 +6130,7 @@ function wfFetchFromSystem(silent=false){
     })
     .catch(function(err){
       console.error(err);
-      if (!silent) alert('Błąd pobierania danych z systemu.');
+      if (!silent) alert('Błąd pobierania danych z systemu.\n' + (err && err.message ? err.message : ''));
       if (btn){
         btn.disabled = false;
         btn.textContent = 'Pobierz z systemu';
