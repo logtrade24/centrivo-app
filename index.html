@@ -1326,7 +1326,11 @@ body.dark-mode .vacation-request-item.pending {
     background: #2e250f !important;
 }
 
-body.dark-mode .vacation-request-item div {
+body.dark-mode .vacation-request-item div,
+body.dark-mode .vacation-request-item p,
+body.dark-mode .vacation-request-item small,
+body.dark-mode .vacation-request-item span,
+body.dark-mode .vacation-request-item em {
     color: #e2e8f0 !important;
 }
 
@@ -1470,11 +1474,22 @@ body.dark-mode #managerVacationView [style*="color: #333"]{
   color: #e2e8f0 !important;
 }
 
-/* === DARK MODE: Okolicznościowe – badge typu urlopu (biały prostokąt) === */
+/* === DARK MODE: Okolicznościowe – badge typu urlopu (biały/jasny prostokąt) === */
 body.dark-mode #managerVacationView span[style*="background"] {
   background: #1e293b !important;
   color: #e2e8f0 !important;
   border: 1px solid #334155 !important;
+}
+/* badge "rodzaj urlopu okolicznościowego" w widoku pracownika */
+body.dark-mode .vacation-request-item div[style*="background: #f3e5f5"] {
+  background: #3b1a5c !important;
+  color: #e2e8f0 !important;
+}
+/* ogólnie: każdy jasny badge wewnątrz vacation-request-item */
+body.dark-mode .vacation-request-item div[style*="background: #f"],
+body.dark-mode .vacation-request-item div[style*="background: #e"] {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
 }
 
 /* ===== BADGE LICZBY PRACUJĄCYCH NA DZIALE ===== */
