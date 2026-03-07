@@ -11527,10 +11527,11 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                   showView('action');
                   updateButtonStates();
                   updateMyTicketsTileInActionView();
-                    
+                  checkUnreadTicketReplies(currentUser.login);
+
                   refreshLiveWorkforce();
                   setTimeout(refreshLiveWorkforce, 800);
-                    
+
                   showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
                 }
             
