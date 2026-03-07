@@ -13283,25 +13283,23 @@ function closeWhoIsWorking() {
 function refreshWhoIsWorking() {
     const content = document.getElementById('whoIsWorkingContent');
     content.innerHTML = '<p style="text-align: center; padding: 40px;">⏳ Ładowanie...</p>';
-    
-    if (typeof google === 'undefined' || !google.script) {
-        // Tryb testowy
-        content.innerHTML = '<p style="text-align: center; padding: 40px;">Tryb testowy - brak połączenia z arkuszem</p>';
-        return;
-    }
-    
-    google.script.run
-        .withSuccessHandler(function(result) {
-            if (result.success) {
-                renderWhoIsWorking(result);
-            } else {
-                content.innerHTML = '<p style="text-align: center; padding: 40px; color: red;">❌ ' + result.message + '</p>';
-            }
-        })
-        .withFailureHandler(function(error) {
-            content.innerHTML = '<p style="text-align: center; padding: 40px; color: red;">❌ Błąd: ' + error.message + '</p>';
-        })
-        .getActiveEmployees();
+
+    fetch(API_BASE + '/workforce/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+        if (result.success) {
+            renderWhoIsWorking(result.data);
+        } else {
+            content.innerHTML = '<p style="text-align: center; padding: 40px; color: red;">❌ ' + (result.message || 'Błąd') + '</p>';
+        }
+    })
+    .catch(function(err) {
+        content.innerHTML = '<p style="text-align: center; padding: 40px; color: red;">❌ Błąd połączenia: ' + (err && err.message ? err.message : err) + '</p>';
+    });
 }
 
 function renderWhoIsWorking(data) {
