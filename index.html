@@ -4664,6 +4664,10 @@ function toggleDashReportRow(i){
   row.style.display = isOpen ? 'none' : 'table-row';
 }
 
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function renderDashReportDetails(r){
   // Jeśli backend zwraca listy osób, pokażemy je.
   // Jak nie zwraca – pokażemy sensowny placeholder (żeby UI działało już teraz).
