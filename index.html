@@ -4262,6 +4262,41 @@ async function apiMarkTicketAsRead(login, ticketId) {
   return data;
 }
 
+async function apiWfGetDepartments(login) {
+  const r = await fetch(`${API_BASE}/workforce/departments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  return r.json().catch(() => ({}));
+}
+
+async function apiWfGetAvailability(login, dept, mondayDate) {
+  const r = await fetch(`${API_BASE}/workforce/availability`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, dept, mondayDate }) });
+  return r.json().catch(() => ({}));
+}
+
+async function apiWfSavePlan(login, plan) {
+  const r = await fetch(`${API_BASE}/workforce/plan/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, plan }) });
+  return r.json().catch(() => ({}));
+}
+
+async function apiWfGetPlan(login, dept, mondayDate) {
+  const r = await fetch(`${API_BASE}/workforce/plan/get`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, dept, mondayDate }) });
+  return r.json().catch(() => ({}));
+}
+
+async function apiWfGetPreviousPlan(login, dept, mondayDate) {
+  const r = await fetch(`${API_BASE}/workforce/plan/previous`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, dept, mondayDate }) });
+  return r.json().catch(() => ({}));
+}
+
+async function apiWfGetAgencies(login) {
+  const r = await fetch(`${API_BASE}/workforce/agencies`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  return r.json().catch(() => ({}));
+}
+
+async function apiWfSendAgency(login, req) {
+  const r = await fetch(`${API_BASE}/workforce/agency/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, ...req }) });
+  return r.json().catch(() => ({}));
+}
+
     let dashSnapshotCache = null;
     let dashDeptFilter = 'ALL';
     let dashShiftFilter = 'ALL';
@@ -6082,8 +6117,10 @@ function wfFetchFromSystem(silent=false){
     btn.textContent = 'Pobieram...';
   }
 
-  google.script.run
-    .withSuccessHandler(function(res){
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  apiWfGetAvailability(login, dept, mondayISO)
+    .then(function(res){
+      if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
       wfSetAvailFieldsFromDays(res.days, useConservative);
       wfBuildInfo(res, useConservative);
       if (btn){
@@ -6091,15 +6128,14 @@ function wfFetchFromSystem(silent=false){
         btn.textContent = 'Pobierz z systemu';
       }
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       console.error(err);
       if (!silent) alert('Błąd pobierania danych z systemu.');
       if (btn){
         btn.disabled = false;
         btn.textContent = 'Pobierz z systemu';
       }
-    })
-    .getWorkforceAvailabilityWeek(dept, mondayISO);
+    });
 }
 
 function wfLoadDeptOptions(callback){
@@ -6115,10 +6151,11 @@ function wfLoadDeptOptions(callback){
   sel.innerHTML = '<option value="ALL">Wszyscy (magazyn)</option>';
   sel.disabled = true;
 
-  google.script.run
-    .withSuccessHandler(function(list){
-      // list spodziewane: ["ALL", "Kompletacja...", ...]
-      const arr = Array.isArray(list) && list.length ? list : ['ALL'];
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  apiWfGetDepartments(login)
+    .then(function(res){
+      const list = (res && res.success && Array.isArray(res.departments)) ? res.departments : ['ALL'];
+      const arr = list.length ? list : ['ALL'];
 
       sel.innerHTML = '';
       arr.forEach((d) => {
@@ -6136,13 +6173,12 @@ function wfLoadDeptOptions(callback){
 
       if (callback) callback();
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       console.error(err);
       sel.value = 'ALL';
       sel.disabled = false;
       if (callback) callback();
-    })
-    .getWorkforceDepartments();
+    });
 }
 
 function wfUpdateIndicators(){
@@ -6365,14 +6401,15 @@ function wfSaveSnapshot(){
 
   wfToast('⏳ Zapisuję plan...', true);
 
-  google.script.run
-    .withSuccessHandler(function(res){
-      wfToast(`✅ Zapisano (${res && res.action ? res.action : 'OK'})`, true);
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  apiWfSavePlan(login, payload)
+    .then(function(res){
+      if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
+      wfToast(`✅ Zapisano (${res.action || 'OK'})`, true);
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       wfToast('❌ Błąd zapisu: ' + (err && err.message ? err.message : err), false);
-    })
-    .saveWorkforcePlan(payload);
+    });
 }
 
 function wfApplyPlanToInputs(plan, applyAvail){
@@ -6417,8 +6454,11 @@ function wfLoadSnapshot(){
 
   wfToast('⏳ Szukam zapisanego planu...', true);
 
-  google.script.run
-    .withSuccessHandler(function(plan){
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  apiWfGetPlan(login, dept, weekMonday)
+    .then(function(res){
+      if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
+      const plan = res.plan;
       if (!plan) { wfToast('Brak zapisu dla tego tygodnia i działu.', false); return; }
 
       // Snapshot = wczytujemy parametry + availability z zapisu (bo to ma być "to samo co było")
@@ -6426,10 +6466,9 @@ function wfLoadSnapshot(){
       wfToast('✅ Wczytano zapis. Przeliczam...', true);
       wfRecalc();
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       wfToast('❌ Błąd wczytania: ' + (err && err.message ? err.message : err), false);
-    })
-    .getWorkforcePlan(dept, weekMonday);
+    });
 }
 
 function wfCopyFromPreviousWeek(){
@@ -6439,8 +6478,11 @@ function wfCopyFromPreviousWeek(){
 
   wfToast('⏳ Szukam poprzedniego planu...', true);
 
-  google.script.run
-    .withSuccessHandler(function(plan){
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  apiWfGetPreviousPlan(login, dept, weekMonday)
+    .then(function(res){
+      if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
+      const plan = res.plan;
       if (!plan) { wfToast('Nie znaleziono poprzedniego planu dla tego działu.', false); return; }
 
       // 3.2 = kopiujemy tylko parametry (bez dostępnych)
@@ -6448,10 +6490,9 @@ function wfCopyFromPreviousWeek(){
       wfToast('✅ Skopiowano parametry. Przeliczam...', true);
       wfRecalc();
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       wfToast('❌ Błąd kopiowania: ' + (err && err.message ? err.message : err), false);
-    })
-    .getPreviousWorkforcePlan(dept, weekMonday);
+    });
 }
 
 function wfOpenAgencyModal(){
@@ -6513,9 +6554,10 @@ function wfLoadAgenciesToSelect(){
   if (note) note.innerHTML = '';
   wfAgencyStatus('', true);
 
-  google.script.run
-    .withSuccessHandler(function(list){
-      wfAgenciesCache = Array.isArray(list) ? list : [];
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  apiWfGetAgencies(login)
+    .then(function(res){
+      wfAgenciesCache = (res && res.success && Array.isArray(res.agencies)) ? res.agencies : [];
 
       if (!wfAgenciesCache.length){
         select.innerHTML = '<option>Brak aktywnych agencji (sprawdź arkusz Agencje)</option>';
@@ -6529,11 +6571,10 @@ function wfLoadAgenciesToSelect(){
       select.onchange = wfAgencyFillNote;
       wfAgencyFillNote();
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       select.innerHTML = '<option>Błąd wczytania agencji</option>';
       wfAgencyStatus('❌ Błąd wczytania agencji: ' + (err?.message || err), false);
-    })
-    .wfGetActiveAgencies();
+    });
 }
 
 function wfAgencyFillNote(){
@@ -6678,14 +6719,15 @@ function wfAgencySend(){
 
   wfAgencyStatus('⏳ Wysyłam...', true);
 
-  google.script.run
-    .withSuccessHandler(function(){
+  const login = (typeof currentUser !== 'undefined' && currentUser && currentUser.login) ? currentUser.login : '';
+  apiWfSendAgency(login, req)
+    .then(function(res){
+      if (!res || !res.success) throw new Error(res && res.message ? res.message : 'Błąd API');
       wfAgencyStatus('✅ Wysłano i zapisano w logu.', true);
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       wfAgencyStatus('❌ Błąd: ' + (err?.message || err), false);
-    })
-    .wfSendAgencyRequest(req);
+    });
 }
 
 /**
