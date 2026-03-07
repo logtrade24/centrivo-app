@@ -6798,8 +6798,7 @@ function sendToSpreadsheetAsync(login, department, action, callback) {
 
       if (callback) callback(result);
 
-      // dosynchronizuj po zapisie
-      refreshLiveWorkforce();
+      // dosynchronizuj po zapisie (jeden refresh po potwierdzeniu zapisu)
       setTimeout(refreshLiveWorkforce, 800);
     })
       .catch((error) => {
@@ -6868,7 +6867,6 @@ function checkSession() {
     setTimeout(() => { try { focusEanInput(); } catch(e){} }, 100);
     
     refreshLiveWorkforce();
-    setTimeout(refreshLiveWorkforce, 800);
 
   } else {
     isLoggedIn = false;
@@ -6921,7 +6919,6 @@ function checkSession() {
 
           // ✅ po loginie od razu zaciągnij liczniki/badge (bez F5)
   refreshLiveWorkforce();
-  setTimeout(refreshLiveWorkforce, 800);
 }
 
 function handleLogin() {
@@ -7149,8 +7146,13 @@ function focusEanInput(retries = 20, delay = 150) {
         }
 
         // ===== LICZNIK NIEODCZYTANYCH ODPOWIEDZI — tylko badge (autorefresh) =====
+        let _lastUnreadRepliesFetch = 0;
         function updateUnreadTicketRepliesBadge(userLogin) {
             if (!userLogin) return;
+            // Pomijaj jeśli ostatni fetch był mniej niż 10s temu (np. tuż po skanie z prefetch)
+            const now = Date.now();
+            if (now - _lastUnreadRepliesFetch < 10000) return;
+            _lastUnreadRepliesFetch = now;
             apiGetUnreadTicketReplies(userLogin)
                 .then(function(data) {
                     unreadTicketRepliesCount = data?.count || 0;
@@ -7500,11 +7502,13 @@ function closeCriticalTicketsModal() {
     autoRefreshInterval = setInterval(() => {
         console.log('⏰ Auto-refresh wykonany o:', new Date().toLocaleTimeString());
 
-        // Tickety — zawsze (API i Apps Script)
-        updateTicketsNotificationBadge();
-        updateCriticalTicketsBadge();
-        if (currentUser && currentUser.login) {
-            updateUnreadTicketRepliesBadge(currentUser.login);
+        // Tickety — tylko gdy użytkownik jest zalogowany (brak sensu odpytywać na ekranie logowania)
+        if (sessionStorage.getItem('isLoggedIn') === 'true') {
+            updateTicketsNotificationBadge();
+            updateCriticalTicketsBadge();
+            if (currentUser && currentUser.login) {
+                updateUnreadTicketRepliesBadge(currentUser.login);
+            }
         }
 
         if (typeof google !== 'undefined' && google.script) {
@@ -7607,7 +7611,6 @@ if (window.isChangingOperation && currentUser) {
 
         apiScanIntent('CHANGE_DEPT', { department: deptId })
             .then(() => {
-                refreshLiveWorkforce();
                 setTimeout(refreshLiveWorkforce, 600);
             })
             .catch(err => {
@@ -7897,8 +7900,7 @@ if (window.isChangingOperation && currentUser) {
 
                 apiScanIntent(intent, { department: targetDepartment })
                   .then(() => {
-                    refreshLiveWorkforce();                // od razu
-                    setTimeout(refreshLiveWorkforce, 600); // dogrywka
+                    setTimeout(refreshLiveWorkforce, 600);
                   })
                   .catch(err => {
                     console.error('❌ Direct scan API error:', err);
@@ -8218,7 +8220,6 @@ if (window.isChangingOperation && currentUser) {
           optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'ENTRY', department: deptToSave });
           apiScanIntent('ENTRY', { department: deptToSave })
               .then(() => {
-                refreshLiveWorkforce();
                 setTimeout(refreshLiveWorkforce, 600);
               })
               .catch(err => {
@@ -8259,7 +8260,6 @@ if (window.isChangingOperation && currentUser) {
           optimisticUpdateLiveWorkforce({ login: currentUser.login, action: 'EXIT', department: deptToSave });
           apiScanIntent('EXIT', { department: deptToSave })
               .then(() => {
-                refreshLiveWorkforce();
                 setTimeout(refreshLiveWorkforce, 600);
               })
               .catch(err => {
@@ -11181,7 +11181,6 @@ function updateTopBarButton() {
   console.log('Wysyłanie do arkusza:', data);
 
   if (typeof google === 'undefined' || !google.script) {
-    showNotification('Zapisano (tryb testowy): ' + action, 'success');
     refreshLiveWorkforce();
     return;
   }
@@ -11610,7 +11609,6 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                   checkUnreadTicketReplies(currentUser.login);
 
                   refreshLiveWorkforce();
-                  setTimeout(refreshLiveWorkforce, 800);
 
                   showNotification(`${currentUser.login} - wybierz akcję (${currentUser.status})`, 'success');
                 }
@@ -11884,7 +11882,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                         if (badge) badge.remove();
                     }
 
-                    if (currentView === 'user') {
+                    if (currentView === 'user' && count !== oldCount) {
                         generateUserTiles();
                     }
 
@@ -12168,7 +12166,6 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
       // ✅ zapis + refresh snapshotu (tak jak przy dziale)
       apiScanIntent(intent, { department: deptToSave })
         .then(() => {
-          refreshLiveWorkforce();
           setTimeout(refreshLiveWorkforce, 600);
         })
         .catch(err => {
@@ -14221,9 +14218,11 @@ function getCategoryName(category) {
     return names[category] || category;
 }
 
-// Synchronizacja z innymi stanowiskami (raz na 60s)
+// Synchronizacja z innymi stanowiskami co 5 minut
+// Pomijamy gdy modal "Kto jest na magazynie?" jest otwarty (ma własny timer)
 setInterval(function () {
-    refreshLiveWorkforce();
+    const _modalOpen = document.getElementById('workforceLiveModal')?.classList.contains('show');
+    if (!_modalOpen) refreshLiveWorkforce();
 }, 300000); // 5 minut
 
 
