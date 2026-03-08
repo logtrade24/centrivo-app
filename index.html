@@ -1847,6 +1847,51 @@ body.modal-open{
   overflow: hidden !important;
 }
 
+/* ===== ZAKŁADKI SZCZEGÓŁÓW DNIA ===== */
+.day-tabs {
+  display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 2px solid var(--card-border);
+}
+.day-tab-btn {
+  padding: 6px 14px; border: none; border-radius: 6px 6px 0 0;
+  background: transparent; cursor: pointer; font-size: 13px; font-weight: 600;
+  color: inherit; opacity: 0.6; transition: opacity .15s, background .15s;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+}
+.day-tab-btn:hover   { opacity: 1; background: var(--card-bg-alt); }
+.day-tab-btn.active  { opacity: 1; border-bottom-color: #f59e0b; }
+.day-tab-panel       { display: block; }
+.day-tab-panel.hidden { display: none; }
+
+/* Tabela godzin pracy */
+.wh-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
+.wh-table th { background:var(--card-bg-alt); padding:6px 8px; text-align:left; font-weight:700; white-space:nowrap; }
+.wh-table td { padding:5px 8px; border-bottom:1px solid var(--row-border); vertical-align:middle; }
+.wh-kpi-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.wh-kpi { flex:1; min-width:120px; padding:8px 10px; border-radius:10px;
+  border:1px solid var(--card-border); background:var(--card-bg);
+  font-size:12px; font-weight:700; }
+.wh-kpi .wh-kpi-val { font-size:20px; font-weight:900; }
+
+/* Heatmapa działów */
+.dept-card { border:1px solid var(--card-border); border-radius:10px;
+  padding:10px 12px; margin-bottom:10px; background:var(--card-bg); }
+.dept-card-title { font-weight:900; font-size:13px; margin-bottom:6px; }
+.dept-heatmap { display:flex; gap:3px; align-items:flex-end; flex-wrap:nowrap; }
+.dept-heatmap-col { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:0; }
+.dept-heatmap-cell {
+  width:100%; aspect-ratio:1; border-radius:3px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; color:#fff;
+  transition: opacity .15s;
+}
+.dept-heatmap-label { font-size:9px; opacity:0.6; font-weight:700; }
+.dept-hm-0 { background:#374151; opacity:.5; }
+.dept-hm-1 { background:#16a34a; }
+.dept-hm-2 { background:#15803d; }
+.dept-hm-3 { background:#14532d; }
+.dept-hm-4 { background:#052e16; }
+body.dark-mode .dept-hm-0 { background:#1f2937; }
+
 /* ===== WIDOK RAPORTÓW ===== */
 .report-trigger-btn {
   padding: 12px 20px;
@@ -4722,6 +4767,7 @@ function renderDashboardReportTable(rows){
 `;
 
     list.forEach((r, i) => {
+    r._rowIndex = i; // potrzebne dla switchDayTab
     const date = formatDatePLShort(r.date);
     const frekw = Number(r.frekw || 0);
     const absentNL = Number(r.absentNoLogin || 0);
@@ -4787,46 +4833,200 @@ function escapeHtml(str) {
 }
 
 function renderDashReportDetails(r){
-  // Jeśli backend zwraca listy osób, pokażemy je.
-  // Jak nie zwraca – pokażemy sensowny placeholder (żeby UI działało już teraz).
-  const d = r?.details || null;
+  const i    = r?._rowIndex ?? 0;
+  const date = r?.date || '';
 
+  // --- TAB 1: Nieobecni (existing content) ---
+  const d = r?.details || null;
+  const badge = x => `<span style="padding:2px 8px; border:1px solid var(--card-border-subtle); border-radius:999px; display:inline-block; margin:3px 6px 0 0;">${escapeHtml(typeof x === 'string' ? x : (x?.name || x?.login || ''))}</span>`;
   const block = (title, arr) => {
     const list = Array.isArray(arr) ? arr : [];
-    if (!list.length) return `
-      <div style="opacity:0.85;"><strong>${title}:</strong> <span style="opacity:0.75;">brak</span></div>
-    `;
-
-    const items = list.map(x => {
-      if (!x) return '';
-      if (typeof x === 'string') return `<span style="padding:2px 8px; border:1px solid var(--card-border-subtle); border-radius:999px; display:inline-block; margin:3px 6px 0 0;">${escapeHtml(x)}</span>`;
-      const name = x.name || x.login || '';
-      return `<span style="padding:2px 8px; border:1px solid var(--card-border-subtle); border-radius:999px; display:inline-block; margin:3px 6px 0 0;">${escapeHtml(name)}</span>`;
-    }).join('');
-
-    return `
-      <div style="margin-top:6px;">
-        <div style="font-weight:900; margin-bottom:4px;">${title}:</div>
-        <div>${items}</div>
-      </div>
-    `;
+    if (!list.length) return `<div style="opacity:0.85;"><strong>${title}:</strong> <span style="opacity:0.75;">brak</span></div>`;
+    return `<div style="margin-top:6px;"><div style="font-weight:900; margin-bottom:4px;">${title}:</div><div>${list.map(badge).join('')}</div></div>`;
   };
-
-  if (!d){
-    return `
-      <div style="opacity:0.85; font-weight:900; margin-bottom:6px;">Szczegóły dnia</div>
-      <div style="opacity:0.75;">Backend nie zwraca list osób dla tego raportu (na razie). Jak dodamy listy, pojawią się tu nazwiska.</div>
-    `;
-  }
+  const absentHTML = d
+    ? `${block('Nieobecni (bez logowania)', d.absentNoLogin || d.absentNoLoginList)}
+       ${block('Urlopy', d.vacation || d.vacationList)}
+       ${block('L4', d.l4 || d.l4List)}
+       ${block('Inne', d.other || d.otherList)}`
+    : `<div style="opacity:0.75; font-size:13px;">Brak szczegółowych danych dla tego dnia.</div>`;
 
   return `
-    <div style="opacity:0.85; font-weight:900; margin-bottom:6px;">Szczegóły dnia</div>
-    ${block('Nieobecni (bez logowania)', d.absentNoLogin || d.absentNoLoginList)}
-    ${block('Urlopy', d.vacation || d.vacationList)}
-    ${block('L4', d.l4 || d.l4List)}
-    ${block('Inne', d.other || d.otherList)}
+    <div class="day-tabs">
+      <button class="day-tab-btn active" onclick="switchDayTab(${i},'absent')">Nieobecni</button>
+      <button class="day-tab-btn"        onclick="switchDayTab(${i},'hours')">Godziny pracy</button>
+      <button class="day-tab-btn"        onclick="switchDayTab(${i},'depts')">Działy</button>
+    </div>
+    <div class="day-tab-panel"        id="dayTab_${i}_absent">${absentHTML}</div>
+    <div class="day-tab-panel hidden" id="dayTab_${i}_hours" data-date="${escapeHtml(date)}">
+      <div style="opacity:0.6; font-size:13px; padding:8px 0;">Kliknij zakładkę, aby załadować dane z logów.</div>
+    </div>
+    <div class="day-tab-panel hidden" id="dayTab_${i}_depts" data-date="${escapeHtml(date)}">
+      <div style="opacity:0.6; font-size:13px; padding:8px 0;">Kliknij zakładkę, aby załadować dane z logów.</div>
+    </div>
   `;
-}    
+}
+
+// ── Cache na załadowane szczegóły dni ────────────────────────────────────────
+window._dayDetailCache = {};
+
+function switchDayTab(i, tab) {
+  // Przyciski
+  const tabsEl = document.querySelector(`#dashReportDetails_${i} .day-tabs`);
+  if (!tabsEl) return;
+  tabsEl.querySelectorAll('.day-tab-btn').forEach(b => b.classList.remove('active'));
+  const order = ['absent','hours','depts'];
+  const btnIdx = order.indexOf(tab);
+  if (btnIdx >= 0) tabsEl.querySelectorAll('.day-tab-btn')[btnIdx]?.classList.add('active');
+
+  // Panele
+  ['absent','hours','depts'].forEach(t => {
+    const el = document.getElementById(`dayTab_${i}_${t}`);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
+
+  // Lazy load
+  if (tab === 'hours' || tab === 'depts') {
+    const panel = document.getElementById(`dayTab_${i}_${tab}`);
+    const date  = panel?.dataset?.date;
+    if (date && !window._dayDetailCache[date]) {
+      loadDayDetail(i, date);
+    } else if (date && window._dayDetailCache[date]) {
+      renderDayDetailTabs(i, window._dayDetailCache[date]);
+    }
+  }
+}
+
+async function loadDayDetail(i, date) {
+  if (!date) return;
+  const login = String(sessionStorage.getItem('loggedInUser') || '').trim().toLowerCase();
+
+  // Pokaż spinner w obu zakładkach
+  ['hours','depts'].forEach(t => {
+    const el = document.getElementById(`dayTab_${i}_${t}`);
+    if (el) el.innerHTML = '<div class="loading" style="padding:12px 0;">⏳ Ładowanie danych z logów...</div>';
+  });
+
+  try {
+    const resp = await fetch(`${API_BASE}/dashboard/day-detail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, date })
+    });
+    const data = await resp.json();
+    if (!data?.success) throw new Error(data?.message || 'Błąd danych');
+    window._dayDetailCache[date] = data;
+    renderDayDetailTabs(i, data);
+  } catch (e) {
+    ['hours','depts'].forEach(t => {
+      const el = document.getElementById(`dayTab_${i}_${t}`);
+      if (el) el.innerHTML = `<div style="color:#ef4444; padding:8px 0; font-size:13px;">❌ Błąd: ${escapeHtml(e.message)}</div>`;
+    });
+  }
+}
+
+function renderDayDetailTabs(i, data) {
+  const hoursEl = document.getElementById(`dayTab_${i}_hours`);
+  const deptsEl = document.getElementById(`dayTab_${i}_depts`);
+  if (hoursEl) hoursEl.innerHTML = renderWorkHoursTab(data);
+  if (deptsEl) deptsEl.innerHTML = renderDeptsTab(data);
+}
+
+function renderWorkHoursTab(data) {
+  const s = data.summary || {};
+  const workers = data.workers || [];
+  if (!workers.length) return '<div style="opacity:0.7; font-size:13px; padding:8px 0;">Brak zdarzeń w logach na ten dzień.</div>';
+
+  const fmtMin = m => {
+    if (m === null || m === undefined) return '—';
+    const h = Math.floor(m / 60), mn = m % 60;
+    return h > 0 ? `${h}h ${mn}min` : `${mn}min`;
+  };
+
+  const kpiBar = `
+    <div class="wh-kpi-bar">
+      <div class="wh-kpi"><div style="opacity:.7;">Łącznie godzin</div><div class="wh-kpi-val">${s.totalHours || 0}h</div></div>
+      <div class="wh-kpi"><div style="opacity:.7;">Pracowało osób</div><div class="wh-kpi-val">${s.workerCount || 0}</div></div>
+      <div class="wh-kpi"><div style="opacity:.7;">Długa przerwa (&gt;25min)</div><div class="wh-kpi-val" style="color:${s.longBreakCount > 0 ? '#f59e0b' : 'inherit'}">${s.longBreakCount || 0}</div></div>
+      <div class="wh-kpi"><div style="opacity:.7;">Krótki dzień (&lt;7h55)</div><div class="wh-kpi-val" style="color:${s.shortDayCount > 0 ? '#ef4444' : 'inherit'}">${s.shortDayCount || 0}</div></div>
+    </div>`;
+
+  const rows = workers.map(w => {
+    const deptSeq = (w.deptSequence || []).map(s =>
+      `${escapeHtml(s.dept)} ${s.from}–${s.to || '?'}`
+    ).join(' → ') || '—';
+
+    let statusHtml;
+    if (w.status === 'OK') {
+      statusHtml = `<span style="color:#22c55e; font-weight:700;">OK</span>`;
+    } else if (w.status === 'short_day') {
+      statusHtml = `<span style="color:#ef4444; font-weight:700;">Wyszedł wcześniej</span>`;
+    } else if (w.status.startsWith('long_break:')) {
+      const over = w.status.split(':')[1];
+      statusHtml = `<span style="color:#f59e0b; font-weight:700;">Przerwa +${over}min</span>`;
+    } else {
+      statusHtml = escapeHtml(w.status);
+    }
+
+    return `<tr>
+      <td><strong>${escapeHtml(w.name)}</strong><br><small style="opacity:.6">${escapeHtml(w.login)}</small></td>
+      <td style="font-size:11px;">${deptSeq}</td>
+      <td>${w.entry || '—'}</td>
+      <td>${w.exit || '—'}</td>
+      <td>${fmtMin(w.workMinutes)}</td>
+      <td>${w.breakMinutes > 0 ? fmtMin(w.breakMinutes) : '—'}</td>
+      <td>${statusHtml}</td>
+    </tr>`;
+  }).join('');
+
+  return `${kpiBar}
+    <table class="wh-table">
+      <thead><tr>
+        <th>Pracownik</th><th>Dział(y)</th><th>Wejście</th><th>Wyjście</th>
+        <th>Czas pracy</th><th>Przerwa</th><th>Status</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderDeptsTab(data) {
+  const s    = data.summary || {};
+  const deps = data.departments || {};
+  const deptNames = Object.keys(deps);
+  if (!deptNames.length) return '<div style="opacity:0.7; font-size:13px; padding:8px 0;">Brak danych o działach na ten dzień.</div>';
+
+  const HOURS = ['06','07','08','09','10','11','12','13','14','15','16','17'];
+
+  const summaryBar = `
+    <div class="wh-kpi-bar" style="margin-bottom:14px;">
+      <div class="wh-kpi"><div style="opacity:.7;">Działów aktywnych</div><div class="wh-kpi-val">${deptNames.length}</div></div>
+      <div class="wh-kpi"><div style="opacity:.7;">Szczyt obsady</div><div class="wh-kpi-val">${s.peakCount || 0} os.</div></div>
+      <div class="wh-kpi"><div style="opacity:.7;">Godzina szczytu</div><div class="wh-kpi-val">${s.peakHour ? s.peakHour + ':00' : '—'}</div></div>
+    </div>`;
+
+  const cards = deptNames.map(dept => {
+    const hmap = deps[dept];
+    const maxVal = Math.max(1, ...HOURS.map(h => hmap[h] || 0));
+
+    const cells = HOURS.map(h => {
+      const cnt = hmap[h] || 0;
+      const cls = cnt === 0 ? 'dept-hm-0' : cnt === 1 ? 'dept-hm-1' : cnt <= 3 ? 'dept-hm-2' : cnt <= 5 ? 'dept-hm-3' : 'dept-hm-4';
+      return `<div class="dept-heatmap-col">
+        <div class="dept-heatmap-cell ${cls}" title="${h}:00 — ${cnt} os.">${cnt > 0 ? cnt : ''}</div>
+        <div class="dept-heatmap-label">${h}</div>
+      </div>`;
+    }).join('');
+
+    const deptMax = Math.max(...HOURS.map(h => hmap[h] || 0));
+    return `<div class="dept-card">
+      <div class="dept-card-title">${escapeHtml(dept)} <span style="opacity:.6; font-weight:600; font-size:11px;">max ${deptMax} os.</span></div>
+      <div class="dept-heatmap">${cells}</div>
+    </div>`;
+  }).join('');
+
+  return summaryBar + cards;
+}
+
 
 async function loadDashboardReport(showToast){
   const st = document.getElementById('dashReportStatus');
