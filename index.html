@@ -1847,6 +1847,57 @@ body.modal-open{
   overflow: hidden !important;
 }
 
+/* ===== WIDOK RAPORTÓW ===== */
+.report-trigger-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+  box-shadow: 0 3px 10px rgba(245,158,11,.35);
+}
+.report-trigger-btn:hover { opacity:.88; }
+.report-trigger-btn:active { transform: scale(.97); }
+.report-trigger-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.report-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:12px; }
+.report-table th {
+  background: #f59e0b; color:#fff; padding:8px 10px;
+  text-align:left; font-weight:600;
+}
+.report-table td { padding:7px 10px; border-bottom:1px solid #e5e7eb; vertical-align:top; }
+.report-table tr.worker-row { cursor:pointer; transition:background .15s; }
+.report-table tr.worker-row:hover { background:#fffbeb; }
+.report-table tr.details-row td {
+  background:#fafafa; padding:0;
+  border-bottom:2px solid #f59e0b;
+}
+.report-table tr.details-row.hidden { display:none; }
+.report-details-inner {
+  padding:10px 14px;
+  font-size:12px;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+  gap:6px 18px;
+}
+.report-details-inner span { display:block; }
+.report-badge {
+  display:inline-block; padding:2px 7px; border-radius:20px;
+  font-size:11px; font-weight:600;
+}
+.report-badge.ok  { background:#d1fae5; color:#065f46; }
+.report-badge.warn { background:#fef3c7; color:#92400e; }
+.report-badge.bad  { background:#fee2e2; color:#991b1b; }
+
+body.dark-mode .report-table th { background:#b45309; }
+body.dark-mode .report-table td { border-color:#374151; color:#e5e7eb; }
+body.dark-mode .report-table tr.worker-row:hover { background:#1f2937; }
+body.dark-mode .report-table tr.details-row td { background:#111827; }
+
     </style>
 </head>
 <body>
@@ -2990,6 +3041,13 @@ body.dark-mode .report-kpi-card { color: #e5e7eb; } /* dark */
                       style="display:none; background: linear-gradient(135deg, #6633FF 0%, #3b82f6 100%); margin-left: 15px;">
                 👁️ Podgląd LIVE
               </button>
+
+              <button id="reportsBtn"
+                      onclick="openReportsView()"
+                      class="dashboard-btn"
+                      style="display:none; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); margin-left: 15px;">
+                📈 Raporty
+              </button>
             </div>
 
             </div> <!-- zamknięcie: #departmentView -->
@@ -3738,6 +3796,30 @@ body.dark-mode .report-kpi-card { color: #e5e7eb; } /* dark */
                     <div class="vacation-requests-list" id="managerVacationRequests">
                         Ładowanie wniosków...
                     </div>
+                </div>
+            </div>
+
+            <!-- WIDOK RAPORTÓW CZASU PRACY (kierownik) -->
+            <div class="view" id="reportView">
+                <button class="back-button" onclick="goBack()">← Powrót do menu głównego</button>
+                <h2 class="view-title">📈 Raporty czasu pracy</h2>
+                <div class="vacation-container">
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px;">
+                        <button class="report-trigger-btn" id="reportBtnCurrentMonth"
+                                onclick="runReport('current-month', this)">
+                            📅 Bieżący miesiąc
+                        </button>
+                        <button class="report-trigger-btn" id="reportBtnLastWeek"
+                                onclick="runReport('last-week', this)">
+                            📆 Ostatni tydzień
+                        </button>
+                        <button class="report-trigger-btn" id="reportBtnLastMonth"
+                                onclick="runReport('last-month', this)">
+                            🗓️ Ostatni miesiąc
+                        </button>
+                    </div>
+                    <div id="reportStatus" style="margin-bottom:16px; color:#666; font-size:14px;"></div>
+                    <div id="reportResults"></div>
                 </div>
             </div>
 
@@ -5507,6 +5589,138 @@ function closeDashboard(){
   try { focusEanInput(); } catch(e) {}
 }
 
+// ===== RAPORTY CZASU PRACY =====
+
+function openReportsView() {
+  showView('report');
+}
+
+async function runReport(type, btnEl) {
+  const login = (currentUser && currentUser.login)
+    ? currentUser.login
+    : sessionStorage.getItem('loggedInUser') || '';
+
+  const statusEl  = document.getElementById('reportStatus');
+  const resultsEl = document.getElementById('reportResults');
+
+  // zablokuj wszystkie przyciski
+  document.querySelectorAll('.report-trigger-btn').forEach(b => { b.disabled = true; });
+  if (statusEl)  statusEl.textContent = '⏳ Przeliczam raport…';
+  if (resultsEl) resultsEl.innerHTML  = '';
+
+  const t0 = Date.now();
+  try {
+    const resp = await fetch(API_BASE + '/reports/' + type, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login })
+    });
+    const data = await resp.json();
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+
+    if (!data.success) {
+      if (statusEl) statusEl.textContent = '❌ Błąd: ' + (data.message || 'nieznany');
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.textContent =
+        `✅ Gotowe (${elapsed}s) — okres: ${data.period} | ` +
+        `rekordów: ${data.recordsProcessed} | pracowników: ${data.workersProcessed}`;
+    }
+    renderReportResults(data.summary || []);
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '❌ Błąd połączenia: ' + e.message;
+  } finally {
+    document.querySelectorAll('.report-trigger-btn').forEach(b => { b.disabled = false; });
+  }
+}
+
+function renderReportResults(rows) {
+  const el = document.getElementById('reportResults');
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = '<p style="color:#666;font-size:14px;">Brak danych w wybranym okresie.</p>';
+    return;
+  }
+
+  const head = `
+    <table class="report-table">
+      <thead><tr>
+        <th>Pracownik</th>
+        <th>Dni rob.</th>
+        <th>Należne (h)</th>
+        <th>Przeprac. (h)</th>
+        <th>Bilans (h)</th>
+        <th>Przerwy śr.</th>
+        <th>Spóźnienia</th>
+        <th>Wcześniej</th>
+        <th>Status</th>
+      </tr></thead>
+      <tbody id="reportTbody"></tbody>
+    </table>`;
+  el.innerHTML = head;
+
+  const tbody = document.getElementById('reportTbody');
+  rows.forEach(w => {
+    const bilans = parseFloat(w.bilans) || 0;
+    const bilansBadge = bilans >= 0
+      ? `<span class="report-badge ok">+${bilans.toFixed(2)}</span>`
+      : `<span class="report-badge bad">${bilans.toFixed(2)}</span>`;
+
+    const lateBadge = (w.lateCount > 0)
+      ? `<span class="report-badge warn">${w.lateCount}</span>`
+      : `<span class="report-badge ok">0</span>`;
+
+    const earlyBadge = (w.earlyExitCount > 0)
+      ? `<span class="report-badge warn">${w.earlyExitCount}</span>`
+      : `<span class="report-badge ok">0</span>`;
+
+    const statusBadge = (w.status === 'OK')
+      ? `<span class="report-badge ok">OK</span>`
+      : `<span class="report-badge warn">${w.status || '—'}</span>`;
+
+    const workerRow = `
+      <tr class="worker-row" onclick="toggleWorkerDetails('${w.login}')">
+        <td><strong>${w.name || w.login}</strong><br><small style="color:#888">${w.login}</small></td>
+        <td>${w.weekdayDays || 0}</td>
+        <td>${parseFloat(w.godzinyNalezne||0).toFixed(1)}</td>
+        <td>${parseFloat(w.godzinyPrzepracowane||0).toFixed(2)}</td>
+        <td>${bilansBadge}</td>
+        <td>${w.avgBreakMin || 0} min (${w.avgBreakPct || 0}%)</td>
+        <td>${lateBadge}</td>
+        <td>${earlyBadge}</td>
+        <td>${statusBadge}</td>
+      </tr>`;
+
+    const ops = w.ops || {};
+    const opsHtml = Object.entries(ops)
+      .filter(([,v]) => v > 0)
+      .map(([k,v]) => `<span><strong>${k}:</strong> ${v} min</span>`)
+      .join('');
+
+    const detailsRow = `
+      <tr class="details-row hidden" id="details-${w.login}">
+        <td colspan="9">
+          <div class="report-details-inner">
+            <span><strong>Łączne przerwy:</strong> ${w.totalBreakMin || 0} min</span>
+            ${opsHtml}
+          </div>
+        </td>
+      </tr>`;
+
+    tbody.insertAdjacentHTML('beforeend', workerRow + detailsRow);
+  });
+}
+
+function toggleWorkerDetails(login) {
+  const row = document.getElementById('details-' + login);
+  if (!row) return;
+  row.classList.toggle('hidden');
+}
+
+// ===== KONIEC RAPORTÓW =====
+
 function liveAutoFitModal(rowsCount){
   // WYŁĄCZONE – modal ma stały rozmiar, a przewija się tylko lista
   const modal = document.querySelector('#workforceLiveModal .who-is-working-modal');
@@ -6883,16 +7097,18 @@ function checkSession() {
 }
 
     function setManagerButtons(isManager){
-  const dash = document.getElementById('dashboardBtn');
-  const ann  = document.getElementById('announcementsBtn');
-  const wf   = document.getElementById('workforcePlannerBtn');
-  const live = document.getElementById('workforceLiveBtn');
+  const dash    = document.getElementById('dashboardBtn');
+  const ann     = document.getElementById('announcementsBtn');
+  const wf      = document.getElementById('workforcePlannerBtn');
+  const live    = document.getElementById('workforceLiveBtn');
+  const reports = document.getElementById('reportsBtn');
 
   const show = isManager ? 'inline-block' : 'none';
-  if (dash) dash.style.display = show;
-  if (ann)  ann.style.display = show;
-  if (wf)   wf.style.display = show;
-  if (live) live.style.display = show;
+  if (dash)    dash.style.display = show;
+  if (ann)     ann.style.display = show;
+  if (wf)      wf.style.display = show;
+  if (live)    live.style.display = show;
+  if (reports) reports.style.display = show;
 }
 
     function localLogin(login){
@@ -10146,6 +10362,13 @@ function updateTopBarButton() {
                 return;
             }
             
+            if (currentView === 'report') {
+                showView('department');
+                showNotification('Powrót do menu głównego', 'info');
+                ensureCodeInputFocus();
+                return;
+            }
+
             if (currentView === 'managerVacation') {
                 currentUser = null;
                 window.vacationMode = false;
