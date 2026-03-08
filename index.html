@@ -1873,24 +1873,54 @@ body.modal-open{
 .wh-kpi .wh-kpi-val { font-size:20px; font-weight:900; }
 
 /* Heatmapa działów */
-.dept-card { border:1px solid var(--card-border); border-radius:10px;
-  padding:10px 12px; margin-bottom:10px; background:var(--card-bg); }
-.dept-card-title { font-weight:900; font-size:13px; margin-bottom:6px; }
-.dept-heatmap { display:flex; gap:3px; align-items:flex-end; flex-wrap:nowrap; }
-.dept-heatmap-col { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:0; }
-.dept-heatmap-cell {
-  width:100%; aspect-ratio:1; border-radius:3px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:10px; font-weight:700; color:#fff;
+.dept-cards-grid {
+  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px;
+}
+.dept-card {
+  flex: 1 1 280px; min-width: 260px; max-width: 100%;
+  border: 1px solid var(--card-border); border-radius: 12px;
+  padding: 12px 14px; background: var(--card-bg);
+}
+.dept-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.dept-card-name { font-weight: 900; font-size: 13px; }
+.dept-card-max  { font-size: 12px; font-weight: 700; color: #22c55e; }
+
+/* heatmapa pozioma: wiersz etykiet godzin + wiersz komórek */
+.dept-hm-wrap { overflow-x: auto; }
+.dept-hm-table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.dept-hm-table td, .dept-hm-table th {
+  text-align: center; padding: 0; font-size: 10px;
+  width: calc(100% / 12);
+}
+.dept-hm-table .hm-label-row th {
+  opacity: 0.55; font-weight: 700; padding-bottom: 3px;
+}
+.dept-hm-table .hm-row-label {
+  font-size: 10px; opacity: 0.55; font-weight: 700;
+  text-align: left; padding-right: 6px; white-space: nowrap; width: 36px;
+}
+.dept-hm-cell {
+  height: 28px; border-radius: 4px; font-weight: 800;
+  font-size: 11px; color: #fff; cursor: default;
   transition: opacity .15s;
 }
-.dept-heatmap-label { font-size:9px; opacity:0.6; font-weight:700; }
-.dept-hm-0 { background:#374151; opacity:.5; }
-.dept-hm-1 { background:#16a34a; }
-.dept-hm-2 { background:#15803d; }
-.dept-hm-3 { background:#14532d; }
-.dept-hm-4 { background:#052e16; }
-body.dark-mode .dept-hm-0 { background:#1f2937; }
+.dept-hm-cell:hover { opacity: .8; }
+.dept-hm-0 { background: #374151; opacity: .45; color: transparent; }
+.dept-hm-1 { background: #16a34a; }
+.dept-hm-2 { background: #15803d; }
+.dept-hm-3 { background: #166534; }
+.dept-hm-4 { background: #14532d; }
+body.dark-mode .dept-hm-0 { background: #1f2937; }
+
+.dept-hm-legend {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  margin-top: 14px; font-size: 11px; font-weight: 700; opacity: .75;
+}
+.dept-hm-legend-item { display: flex; align-items: center; gap: 5px; }
+.dept-hm-legend-dot  { width: 12px; height: 12px; border-radius: 3px; }
 
 /* ===== WIDOK RAPORTÓW ===== */
 .report-trigger-btn {
@@ -4673,6 +4703,8 @@ function renderDashboardReportTable(rows){
   let sumL4 = 0;
   let sumOther = 0;
   let sumFrekw = 0;
+  let sumWorkH = 0;
+  let sumPresent = 0;
   let daysCount = 0;
 
   for (const r of list){
@@ -4683,14 +4715,15 @@ function renderDashboardReportTable(rows){
     const other = Number(r.other || 0);
     const frekw = Number(r.frekw || 0);
 
-    sumPlanned += planned;
+    sumPlanned  += planned;
     sumAbsentNL += absentNL;
     sumVacation += vacation;
-    sumL4 += l4;
-    sumOther += other;
-
-    sumFrekw += frekw;
-    daysCount += 1;
+    sumL4       += l4;
+    sumOther    += other;
+    sumFrekw    += frekw;
+    sumWorkH    += Number(r.totalWorkH || 0);
+    sumPresent  += Number(r.present || 0);
+    daysCount   += 1;
   }
 
   const avgPlanned = daysCount ? Math.round(sumPlanned / daysCount) : 0;
@@ -4761,6 +4794,8 @@ function renderDashboardReportTable(rows){
         <th>L4</th>
         <th>Inne</th>
         <th>Frekwencja</th>
+        <th title="Łączne godziny przepracowane (wszyscy z parą ENTRY+EXIT)">Przeprac. godz.</th>
+        <th title="Liczba osób, które się zalogowały">Pracujących</th>
       </tr>
     </thead>
     <tbody>
@@ -4790,10 +4825,12 @@ function renderDashboardReportTable(rows){
         <td>${Number(r.l4||0)}</td>
         <td>${Number(r.other||0)}</td>
         <td style="font-weight:900; color:${frekwColor};">${frekw}%</td>
+        <td style="font-weight:700;">${r.totalWorkH != null ? r.totalWorkH + 'h' : '—'}</td>
+        <td style="font-weight:700;">${r.present != null ? r.present : '—'}</td>
       </tr>
 
       <tr id="dashReportDetailsRow_${i}" style="display:none;">
-        <td colspan="7" style="padding:10px 12px;">
+        <td colspan="9" style="padding:10px 12px;">
           <div id="dashReportDetails_${i}" style="border:1px solid var(--card-border); background: var(--card-bg); border-radius:12px; padding:10px 12px;">
             ${renderDashReportDetails(r)}
           </div>
@@ -4813,6 +4850,8 @@ function renderDashboardReportTable(rows){
           <td>${sumL4}</td>
           <td>${sumOther}</td>
           <td style="font-weight:900; color:${avgFrekwColor};" title="Średnia frekwencja z okresu">${avgFrekw}%</td>
+          <td style="font-weight:700;">${Math.round(sumWorkH * 10) / 10}h</td>
+          <td style="font-weight:700;">${sumPresent}</td>
         </tr>
       </tfoot>
     </table>
@@ -4990,41 +5029,80 @@ function renderWorkHoursTab(data) {
 }
 
 function renderDeptsTab(data) {
-  const s    = data.summary || {};
-  const deps = data.departments || {};
+  const s         = data.summary || {};
+  const deps      = data.departments || {};
   const deptNames = Object.keys(deps);
   if (!deptNames.length) return '<div style="opacity:0.7; font-size:13px; padding:8px 0;">Brak danych o działach na ten dzień.</div>';
 
   const HOURS = ['06','07','08','09','10','11','12','13','14','15','16','17'];
 
+  // Ikony i nazwy wyświetlane per dział (dopasowanie po fragmencie nazwy)
+  function deptMeta(name) {
+    const n = name.toLowerCase();
+    if (n.includes('przyjec'))  return { icon: '📦', color: '#17a2b8' };
+    if (n.includes('rozlad'))   return { icon: '🚛', color: '#795548' };
+    if (n.includes('zalad'))    return { icon: '📤', color: '#8d6e63' };
+    if (n.includes('relok'))    return { icon: '🔄', color: '#00897b' };
+    if (n.includes('komplet'))  return { icon: '📋', color: '#007bff' };
+    if (n.includes('weryfik'))  return { icon: '✅', color: '#43a047' };
+    if (n.includes('packing'))  return { icon: '🎁', color: '#e53935' };
+    if (n.includes('porzad') || n.includes('porząd')) return { icon: '🧹', color: '#fd7e14' };
+    if (n.includes('inwent'))   return { icon: '📊', color: '#212121' };
+    return { icon: '🏭', color: '#6b7280' };
+  }
+
   const summaryBar = `
-    <div class="wh-kpi-bar" style="margin-bottom:14px;">
-      <div class="wh-kpi"><div style="opacity:.7;">Działów aktywnych</div><div class="wh-kpi-val">${deptNames.length}</div></div>
-      <div class="wh-kpi"><div style="opacity:.7;">Szczyt obsady</div><div class="wh-kpi-val">${s.peakCount || 0} os.</div></div>
-      <div class="wh-kpi"><div style="opacity:.7;">Godzina szczytu</div><div class="wh-kpi-val">${s.peakHour ? s.peakHour + ':00' : '—'}</div></div>
-    </div>`;
+    <div class="wh-kpi-bar" style="margin-bottom:16px;">
+      <div class="wh-kpi"><div style="opacity:.7; font-size:11px; font-weight:700;">DZIAŁÓW AKTYWNYCH</div><div class="wh-kpi-val">${deptNames.length}</div></div>
+      <div class="wh-kpi"><div style="opacity:.7; font-size:11px; font-weight:700;">SZCZYT OBSADY</div><div class="wh-kpi-val" style="color:#22c55e;">${s.peakCount || 0} osób</div></div>
+      <div class="wh-kpi"><div style="opacity:.7; font-size:11px; font-weight:700;">GODZINA SZCZYTU</div><div class="wh-kpi-val">${s.peakHour ? s.peakHour + ':00–' + (String(Number(s.peakHour)+1).padStart(2,'0')) + ':00' : '—'}</div></div>
+    </div>
+    <div style="font-size:11px; font-weight:800; opacity:.5; letter-spacing:.05em; margin-bottom:8px;">OBSADA GODZINOWA PER DZIAŁ</div>`;
 
   const cards = deptNames.map(dept => {
-    const hmap = deps[dept];
-    const maxVal = Math.max(1, ...HOURS.map(h => hmap[h] || 0));
+    const hmap   = deps[dept];
+    const meta   = deptMeta(dept);
+    const deptMax = Math.max(0, ...HOURS.map(h => hmap[h] || 0));
 
-    const cells = HOURS.map(h => {
+    // wiersz etykiet godzin
+    const labelCells = HOURS.map(h => `<th>${h}</th>`).join('');
+
+    // wiersz komórek heatmapy
+    const hmCells = HOURS.map(h => {
       const cnt = hmap[h] || 0;
-      const cls = cnt === 0 ? 'dept-hm-0' : cnt === 1 ? 'dept-hm-1' : cnt <= 3 ? 'dept-hm-2' : cnt <= 5 ? 'dept-hm-3' : 'dept-hm-4';
-      return `<div class="dept-heatmap-col">
-        <div class="dept-heatmap-cell ${cls}" title="${h}:00 — ${cnt} os.">${cnt > 0 ? cnt : ''}</div>
-        <div class="dept-heatmap-label">${h}</div>
-      </div>`;
+      const cls = cnt === 0 ? 'dept-hm-0'
+                : cnt === 1 ? 'dept-hm-1'
+                : cnt <= 2  ? 'dept-hm-2'
+                : cnt <= 4  ? 'dept-hm-3'
+                :              'dept-hm-4';
+      return `<td><div class="dept-hm-cell ${cls}" title="${h}:00 — ${cnt} os.">${cnt > 0 ? cnt : ''}</div></td>`;
     }).join('');
 
-    const deptMax = Math.max(...HOURS.map(h => hmap[h] || 0));
     return `<div class="dept-card">
-      <div class="dept-card-title">${escapeHtml(dept)} <span style="opacity:.6; font-weight:600; font-size:11px;">max ${deptMax} os.</span></div>
-      <div class="dept-heatmap">${cells}</div>
+      <div class="dept-card-header">
+        <div class="dept-card-name">${meta.icon} <span style="color:${meta.color}">${escapeHtml(dept)}</span></div>
+        <div class="dept-card-max">Max: ${deptMax} ${deptMax === 1 ? 'osoba' : deptMax < 5 ? 'osoby' : 'osób'}</div>
+      </div>
+      <div class="dept-hm-wrap">
+        <table class="dept-hm-table">
+          <tr class="hm-label-row">${labelCells}</tr>
+          <tr><td colspan="12" style="height:2px;"></td></tr>
+          <tr>${hmCells}</tr>
+        </table>
+      </div>
     </div>`;
   }).join('');
 
-  return summaryBar + cards;
+  const legend = `
+    <div class="dept-hm-legend">
+      <div class="dept-hm-legend-item"><div class="dept-hm-legend-dot dept-hm-0"></div> 0 osób</div>
+      <div class="dept-hm-legend-item"><div class="dept-hm-legend-dot dept-hm-1"></div> 1 osoba</div>
+      <div class="dept-hm-legend-item"><div class="dept-hm-legend-dot dept-hm-2"></div> 2 osoby</div>
+      <div class="dept-hm-legend-item"><div class="dept-hm-legend-dot dept-hm-3"></div> 3–4 osoby</div>
+      <div class="dept-hm-legend-item"><div class="dept-hm-legend-dot dept-hm-4"></div> 5+ osób</div>
+    </div>`;
+
+  return summaryBar + `<div class="dept-cards-grid">${cards}</div>` + legend;
 }
 
 
