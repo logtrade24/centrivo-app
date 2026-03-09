@@ -9357,7 +9357,9 @@ if (code && !sessionStorage.getItem('currentEmployeeCode')) {
     showNotification('✅ Wniosek o dzień wolny złożony!', 'success');
 
     setTimeout(() => {
-      if (typeof updateManagerNotificationBadge === 'function') updateManagerNotificationBadge();
+      pendingVacationCount = (pendingVacationCount || 0) + 1;
+      const _vBtn = document.getElementById('vacationBtn');
+      if (_vBtn) { let _vBadge = _vBtn.querySelector('.vacation-btn-badge'); if (!_vBadge) { _vBadge = document.createElement('div'); _vBadge.className = 'vacation-btn-badge'; _vBtn.appendChild(_vBadge); } _vBadge.textContent = pendingVacationCount; }
       showView('absenceType');
     }, 500);
 
@@ -9586,7 +9588,9 @@ if (code && !sessionStorage.getItem('currentEmployeeCode')) {
     showNotification('✅ Wniosek o urlop okolicznościowy złożony!', 'success');
 
     setTimeout(() => {
-      if (typeof updateManagerNotificationBadge === 'function') updateManagerNotificationBadge();
+      pendingVacationCount = (pendingVacationCount || 0) + 1;
+      const _vBtn = document.getElementById('vacationBtn');
+      if (_vBtn) { let _vBadge = _vBtn.querySelector('.vacation-btn-badge'); if (!_vBadge) { _vBadge = document.createElement('div'); _vBadge.className = 'vacation-btn-badge'; _vBtn.appendChild(_vBadge); } _vBadge.textContent = pendingVacationCount; }
       showView('absenceType');
     }, 500);
 
@@ -10121,7 +10125,9 @@ return;
                         yearPlanSelectedDates = [];
                         yearPlanRemovedDates = [];
                         setTimeout(() => {
-                            updateManagerNotificationBadge();
+                            pendingVacationCount = (pendingVacationCount || 0) + 1;
+                            const _vBtn = document.getElementById('vacationBtn');
+                            if (_vBtn) { let _vBadge = _vBtn.querySelector('.vacation-btn-badge'); if (!_vBadge) { _vBadge = document.createElement('div'); _vBadge.className = 'vacation-btn-badge'; _vBtn.appendChild(_vBadge); } _vBadge.textContent = pendingVacationCount; }
                             showView('absenceType');
                         }, 2000);
                     } else {
@@ -10353,7 +10359,9 @@ return;
             })
             .then(() => {
                 loadUserVacationRequests(currentUser.login);
-                updateManagerNotificationBadge();
+                pendingVacationCount = (pendingVacationCount || 0) + 1;
+                const _vBtn = document.getElementById('vacationBtn');
+                if (_vBtn) { let _vBadge = _vBtn.querySelector('.vacation-btn-badge'); if (!_vBadge) { _vBadge = document.createElement('div'); _vBadge.className = 'vacation-btn-badge'; _vBtn.appendChild(_vBadge); } _vBadge.textContent = pendingVacationCount; }
             })
             .catch(err => {
                 console.error('❌ create vacation API error:', err);
