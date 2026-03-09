@@ -3324,7 +3324,7 @@ body.dark-mode .report-kpi-card { color: #e5e7eb; } /* dark */
                     <input type="text" class="verification-input" id="l4VerificationCodeInput" 
                           placeholder="Zeskanuj kod EAN kierownika" autocomplete="off" autofocus>
                     <div style="margin-top: 15px; color: #666; font-size: 14px;">
-                        Tylko kod kierownika (jerzyd) jest akceptowany
+                        Tylko kod kierownika jest akceptowany
                     </div>
                 </div>
             </div>
@@ -7340,7 +7340,7 @@ function checkSession() {
     if (mainInterface) mainInterface.style.display = 'block';
 
     // kafelki kierownika
-    setManagerButtons(String(loggedInUser || '').trim() === 'jerzyd');
+    setManagerButtons(String(loggedInUser || '').trim() === 'kierownik');
 
     if (typeof showView === 'function') showView('department');
       try { setupDepartmentTileBadges(); } catch(e) {}
@@ -7390,7 +7390,7 @@ function checkSession() {
   if (mi) mi.style.display = 'block';
 
   // pokaż/ukryj kafelki kierownika
-  const isManager = (String(login || '').trim() === 'jerzyd');
+  const isManager = (String(login || '').trim() === 'kierownik');
   setManagerButtons(isManager);
 
   if (typeof showView === 'function') showView('department');
@@ -7783,7 +7783,7 @@ function focusEanInput(retries = 20, delay = 150) {
               }
               
               // KIEROWNIK - pokaż kafelek zarządzania
-              if (currentUser.login === 'jerzyd') {
+              if (currentUser.isManager) {
                   if (myTicketsBtn) myTicketsBtn.style.display = 'none';
                   
                   if (managerTicketsBtn) {
@@ -8208,16 +8208,17 @@ if (window.isChangingOperation && currentUser) {
                     }
 
                     // Specjalna obsługa kierownika - sprawdź wnioski przed weryfikacją
-                    if (userLogin === 'jerzyd') {
+                    const userObj = Object.values(departments).flatMap(d => d.users || []).find(u => u.login === userLogin);
+                    if (userObj && userObj.isManager) {
                         let managerUser = null;
                         let managerDept = null;
                         for (const [deptId, dept] of Object.entries(departments)) {
-                            const u = dept.users.find(u => u.login === 'jerzyd');
+                            const u = dept.users.find(u => u.login === userLogin);
                             if (u) { managerUser = u; managerDept = deptId; break; }
                         }
-                        const managerName = managerUser ? managerUser.name : 'Jerzy Dwurznik';
+                        const managerName = managerUser ? managerUser.name : userLogin;
 
-                        apiGetPendingAbsenceCount('jerzyd')
+                        apiGetPendingAbsenceCount(userLogin)
                             .then(function(data) {
                                 pendingVacationCount = data?.count || 0;
                                 console.log('📊 Licznik zaktualizowany:', pendingVacationCount);
@@ -8225,10 +8226,10 @@ if (window.isChangingOperation && currentUser) {
                                 if (pendingVacationCount > 0) {
                                     console.log('✅ Są oczekujące wnioski - panel kierownika');
                                     selectedUserForVerification = {
-                                        login: 'jerzyd',
+                                        login: userLogin,
                                         name: managerName,
                                         isManagerAccess: true,
-                                        managerData: managerUser || { login: 'jerzyd', name: managerName },
+                                        managerData: managerUser || { login: userLogin, name: managerName },
                                         foundDepartment: managerDept
                                     };
                                     document.getElementById('selectedUserName').textContent = managerName;
@@ -11421,7 +11422,7 @@ function updateTopBarButton() {
                   name: 'Przyjęcie dostaw',
                   users: [
                     { login: 'rafalk5', code: '1233727088163', name: 'Rafał test' },
-                    { login: 'jerzyd', code: '1236737459372', name: 'Jerzy Dwurznik' }
+                    { login: 'manager', code: '1236737459372', name: 'Klient zarządzający', isManager: true }
                   ]
                 }
               };
@@ -11645,7 +11646,7 @@ function updateTopBarButton() {
                     tile.onclick = () => selectUser(user.login);
                 }
                 
-                if (user.login === 'jerzyd' && pendingVacationCount > 0) {
+                if (user.isManager && pendingVacationCount > 0) {
                     const badge = document.createElement('div');
                     badge.className = 'user-notification-badge';
                     badge.textContent = pendingVacationCount;
@@ -12034,7 +12035,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 sessionStorage.setItem('currentEmployeeLogin', currentUser.login);
 
                 // ===== KIEROWNIK - ZOPTYMALIZOWANY FLOW (API) =====
-                if (data.login === 'jerzyd') {
+                if (data.isManager) {
                     console.log('🚀 Kierownik zeskanowany - NATYCHMIAST pokazuję weryfikację');
                     selectedUserForVerification = {
                         login: data.login,
@@ -12054,7 +12055,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                     }, 100);
                     showNotification('Zweryfikuj tożsamość (ładowanie danych...)', 'info');
 
-                    apiGetPendingAbsenceCount('jerzyd')
+                    apiGetPendingAbsenceCount(data.login)
                         .then(function(countData) {
                             const liveCount = countData?.count || 0;
                             pendingVacationCount = liveCount;
@@ -12148,7 +12149,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 }
                 
                 // ===== KIEROWNIK - ZOPTYMALIZOWANY FLOW =====
-            if (foundUser.login === 'jerzyd') {
+            if (foundUser.isManager) {
                 console.log('🚀 Kierownik zeskanowany - NATYCHMIAST pokazuję weryfikację');
                 
                 const managerDataForVacation = {
@@ -12350,7 +12351,9 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         }
 
         function updateManagerNotificationBadge() {
-            apiGetPendingAbsenceCount('jerzyd')
+            const _mgLogin = (currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('currentEmployeeLogin') || '');
+            if (!_mgLogin) return;
+            apiGetPendingAbsenceCount(_mgLogin)
                 .then(function(data) {
                     const count = data?.count || 0;
                     const oldCount = pendingVacationCount;
@@ -12754,7 +12757,7 @@ function loadAllTickets() {
 
     container.innerHTML = '<p style="text-align: center; color: #666;">Ładowanie zgłoszeń...</p>';
 
-    const managerLogin = (currentUser && currentUser.login) ? currentUser.login : 'jerzyd';
+    const managerLogin = (currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('currentEmployeeLogin') || '');
 
     apiGetAllTickets(managerLogin, currentTicketFilter)
         .then(function(data) {
@@ -13061,7 +13064,7 @@ function changeTicketStatus(newStatus) {
         }
     }
     
-    const managerLogin = (currentUser && currentUser.login) ? currentUser.login : 'jerzyd';
+    const managerLogin = (currentUser && currentUser.login) ? currentUser.login : (sessionStorage.getItem('currentEmployeeLogin') || '');
 
     apiUpdateTicketStatus(managerLogin, currentTicketDetails.id, newStatus, comment)
         .then(function(result) {
@@ -14192,8 +14195,8 @@ function refreshLiveWorkforce() {
    (currentUser && currentUser.login) ||
    '').trim();
 
-    // snapshot liczników/badge pobieramy zawsze "serwisowo"
-    const snapshotLogin = 'jerzyd';
+    // snapshot liczników/badge — używamy loginu z sesji (lub pierwszego dostępnego)
+    const snapshotLogin = sessionStorage.getItem('currentEmployeeLogin') || sessionStorage.getItem('loggedInUser') || login;
 
     fetch(`${API_BASE}/workforce/live-snapshot`, {
       method: 'POST',
@@ -14385,17 +14388,34 @@ window.confirmL4ManagerCode = function() {
     
     const cleanCode = inputCode.replace(/^~+/, '').replace(/~+$/, '').trim();
     console.log('Weryfikacja L4 - kod:', cleanCode);
-    
-    // Tylko kod kierownika jerzyd
-    if (cleanCode === '1236737459372') {
-        console.log('✅ Kod kierownika poprawny - otwieram formularz L4');
-        currentUser = { login: 'jerzyd', name: 'Jerzy Dwurznik' };
+
+    // Weryfikacja przez API — sprawdza rolę z arkusza Pracownicy
+    fetch(`${API_BASE}/employee/by-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: cleanCode })
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        if (!data.success) {
+            showNotification('❌ Nieznany kod', 'error');
+            document.getElementById('l4VerificationCodeInput').value = '';
+            document.getElementById('l4VerificationCodeInput').focus();
+            return;
+        }
+        if (!data.isManager) {
+            showNotification('❌ Tylko kierownik może rejestrować L4', 'error');
+            document.getElementById('l4VerificationCodeInput').value = '';
+            document.getElementById('l4VerificationCodeInput').focus();
+            return;
+        }
+        console.log('✅ Kierownik zweryfikowany - otwieram formularz L4');
+        currentUser = { login: data.login, name: data.name, isManager: true };
         showL4Form();
-    } else {
-        showNotification('❌ Tylko kierownik może rejestrować L4', 'error');
-        document.getElementById('l4VerificationCodeInput').value = '';
-        document.getElementById('l4VerificationCodeInput').focus();
-    }
+    })
+    .catch(function() {
+        showNotification('❌ Błąd weryfikacji', 'error');
+    });
 };
 
 /**
