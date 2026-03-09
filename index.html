@@ -4547,8 +4547,8 @@ function dashSetDeptFilter(dept){
   const hint = document.getElementById('dashDeptHint');
   if (hint) hint.textContent = (dashDeptFilter === 'ALL') ? 'Widok: cała firma' : `Widok: ${dashDeptFilter}`;
 
-  // ✅ render bez fetcha
-  if (dashFullCache) dashApplyFiltersAndRender();
+  // re-fetch żeby overall było aktualne dla wybranego działu
+  loadDashboardFull(false);
 }
 
     function dashSetShiftFilter(val){
@@ -5600,25 +5600,13 @@ function refreshAbsenceHistory(){
   if (split) split.innerHTML = `✅&nbsp;Pracuje: ${workNow}<br>🟡&nbsp;Przerwa: ${onBreakActive}`;
   if (sumAbsent) sumAbsent.textContent = String(absentActive);
 
-  // usprawiedliwione rozbijamy na kafelki z aktywnych zmian (żeby miało sens)
-  // (na razie sumujemy po statusKey z aktywnych)
-  let vac = 0, l4 = 0, oth = 0;
-  for (const k of keysForActiveCounts){
-    const sh = allShifts[k];
-    if (!sh) continue;
-    const planned = Array.isArray(sh.planned) ? sh.planned : [];
-    for (const w of planned.filter(workerInDept)){
-      const sk = String(w?.currentStatus?.statusKey || '').toLowerCase();
-      if (sk === 'vacation') vac++;
-      else if (sk === 'l4') l4++;
-      else if (sk === 'dayoff' || sk === 'occasional') oth++;
-    }
-  }
-
-  if (sumVacation) sumVacation.textContent = String(vac);
-  if (sumL4) sumL4.textContent = String(l4);
-  if (sumOther) sumOther.textContent = String(oth);
-  if (sumFrekw) sumFrekw.textContent = `${frekw}%`;
+  // kafelki absencji i frekwencja — pobieramy z backend overall
+  // (obejmuje wszystkich pracowników, nie tylko tych w aktywnych zmianach)
+  const ov = src.overall || {};
+  if (sumVacation) sumVacation.textContent = String(ov.vacation ?? 0);
+  if (sumL4) sumL4.textContent = String(ov.l4 ?? 0);
+  if (sumOther) sumOther.textContent = String(ov.otherAbsences ?? 0);
+  if (sumFrekw) sumFrekw.textContent = `${ov.frekwencja ?? frekw}%`;
 
   // ===== 4) TOP / DZIAŁ (PRACUJE) =====
   const topBox = document.getElementById('dashTopBox');
