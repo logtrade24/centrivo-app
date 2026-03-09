@@ -8325,34 +8325,43 @@ if (window.isChangingOperation && currentUser) {
 
     // ===== KIEROWNIK - PANEL URLOPÓW =====
     if (selectedUserForVerification.isManagerAccess === true) {
-        console.log('🟢 Tryb kierownika - sprawdzam kod...');
-        
-        if (cleanInputCode === '1236737459372') {
-            console.log('🟢 Kod kierownika poprawny');
-            
-            // Pobierz dane zapisane przy pierwszym skanie
-            const managerData = selectedUserForVerification.managerData;
-            const foundDepartment = selectedUserForVerification.foundDepartment;
-            
-            selectedUserForVerification = null;
-            currentUser = managerData; // ustaw currentUser zanim zostaną wywołane funkcje panelu
+        console.log('🟢 Tryb kierownika - sprawdzam kod przez API...');
 
-            // Sprawdź czy są urlopy (dane już powinny być załadowane w tle)
+        fetch(`${API_BASE}/employee/by-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: cleanInputCode })
+        })
+        .then(r => r.json())
+        .then(function(data) {
+            if (!data.success || !data.isManager) {
+                showNotification('Nieprawidłowy kod - tylko kierownik ma dostęp', 'error');
+                document.getElementById('verificationCodeInput').value = '';
+                document.getElementById('verificationCodeInput').focus();
+                return;
+            }
+            console.log('🟢 Kod kierownika poprawny');
+
+            const managerData = selectedUserForVerification.managerData || { login: data.login, name: data.name, isManager: true };
+            const foundDepartment = selectedUserForVerification.foundDepartment;
+
+            selectedUserForVerification = null;
+            currentUser = { ...managerData, login: data.login, name: data.name, isManager: true };
+            sessionStorage.setItem('currentEmployeeLogin', data.login);
+
             if (pendingVacationCount > 0) {
                 console.log('📅 Są oczekujące urlopy - otwieram panel urlopów');
                 showManagerVacation();
                 showNotification('Panel urlopów (' + pendingVacationCount + ' oczekujących)', 'success');
             } else {
                 console.log('ℹ️ Brak urlopów - kontynuuję normalny flow');
-                continueManagerFlowAfterVacationCheck(managerData, foundDepartment);
+                continueManagerFlowAfterVacationCheck(currentUser, foundDepartment);
             }
-            return;
-        } else {
-            showNotification('Nieprawidłowy kod - tylko kierownik ma dostęp', 'error');
-            document.getElementById('verificationCodeInput').value = '';
-            document.getElementById('verificationCodeInput').focus();
-            return;
-        }
+        })
+        .catch(function() {
+            showNotification('Błąd weryfikacji - spróbuj ponownie', 'error');
+        });
+        return;
     }
     
     // ===== BEZPOŚREDNI SKAN PO WYBRANIU KAFELKA OPERACJI =====
@@ -13659,7 +13668,7 @@ async function loadEmployeesForRecipients() {
     container.innerHTML = '<p style="padding: 10px; color: #888;">⏳ Ładowanie...</p>';
 
     try {
-        const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+        const login = (currentUser?.login || sessionStorage.getItem('currentEmployeeLogin') || sessionStorage.getItem('loggedInUser') || '').trim();
         if (!login) {
             container.innerHTML = '<p style="color: red;">❌ Brak loginu (zaloguj się ponownie)</p>';
             return;
@@ -13715,7 +13724,7 @@ async function submitAnnouncement() {
         odbiorcy = selected.join(',');
     }
 
-    const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+    const login = (currentUser?.login || sessionStorage.getItem('currentEmployeeLogin') || sessionStorage.getItem('loggedInUser') || '').trim();
     const autor = login || 'kierownik';
 
     try {
@@ -13737,7 +13746,7 @@ async function loadAnnouncementsList() {
     container.innerHTML = '<p style="text-align: center; padding: 40px; color: #888;">⏳ Ładowanie...</p>';
 
     try {
-        const login = (sessionStorage.getItem('loggedInUser') || '').trim();
+        const login = (currentUser?.login || sessionStorage.getItem('currentEmployeeLogin') || sessionStorage.getItem('loggedInUser') || '').trim();
         if (!login) {
             container.innerHTML = '<p style="color: red; text-align: center; padding: 40px;">❌ Brak loginu kierownika (zaloguj się ponownie)</p>';
             return;
@@ -14446,7 +14455,7 @@ async function loadEmployeesForL4() {
   sel.innerHTML = '<option value="">⏳ Ładuję...</option>';
 
   try {
-    const login = (sessionStorage.getItem('loggedInUser') || currentUser?.login || '').trim();
+    const login = (currentUser?.login || sessionStorage.getItem('currentEmployeeLogin') || sessionStorage.getItem('loggedInUser') || '').trim();
     if (!login) {
       sel.innerHTML = '<option value="">❌ Brak loginu (zaloguj się ponownie)</option>';
       return;
