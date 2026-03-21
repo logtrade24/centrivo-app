@@ -7542,6 +7542,11 @@ function focusEanInput(retries = 20, delay = 150) {
         let unreadTicketRepliesCount = 0;  // Nieodczytane odpowiedzi dla pracownika
         let criticalTicketsCount = 0;      // Krytyczne tickety dla kierownika
         let unreadRepliesPromise = null;   // Pre-fetch nieodczytanych — startuje przy skanie
+        // ===== OCHRONA PRZED PODWÓJNYM SKANEM =====
+        let scanLock = false;
+        let scanDebounceTimer = null;
+        let lastScanCode = null;
+        let lastScanTime = 0;
         // ===== CACHE OGŁOSZEŃ =====
         let announcementsCache = {};
         let announcementsCacheLoaded = false;
@@ -11986,19 +11991,16 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         }
 
         function handleKeyPress(e) {
-            console.log('Klawisz:', e.key, 'Wartość:', this.value);
-            
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const code = this.value.trim();
-                console.log('Enter - kod do skanowania:', code);
-                
                 if (code) {
-                    const cleanCode = code.replace(/^~/, '').replace(/~$/, '').trim();
-                    console.log('Kod po oczyszczeniu:', cleanCode);
-                    handleCodeScan(cleanCode);
+                    const cleanCode = code.replace(/^~+/, '').replace(/~+$/, '').trim();
                     this.value = '';
                     this.focus();
+                    // Debounce 80ms — skaner może wysłać Enter 2x
+                    clearTimeout(scanDebounceTimer);
+                    scanDebounceTimer = setTimeout(() => handleCodeScan(cleanCode), 80);
                 }
             }
         }
@@ -12007,19 +12009,23 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
         }
 
         function handleCodeScan(code) {
-            console.log('=== ROZPOCZĘCIE SKANOWANIA ===');
-            console.log('Otrzymany kod:', code);
-            
+            // Blokada przed równoległymi skanami
+            if (scanLock) return;
             const cleanCode = code.toString().replace(/^~+/, '').replace(/~+$/, '').trim();
-            console.log('Kod po oczyszczeniu:', cleanCode);
-            
+            // Deduplikacja: ten sam kod w ciągu 600ms → ignoruj
+            const now = Date.now();
+            if (cleanCode === lastScanCode && now - lastScanTime < 600) return;
+            lastScanCode = cleanCode;
+            lastScanTime = now;
+            scanLock = true;
+            setTimeout(() => { scanLock = false; }, 6000); // bezpiecznik na wypadek zawieszenia
+
             sessionStorage.setItem('currentEmployeeCode', cleanCode);
 
             // ===== TRYB API (bez Google Apps Script) =====
-            showNotification('⏳ Wysyłam do API...', 'info');
-            
             apiLookupEmployeeByCode(cleanCode)
               .then((data) => {
+                scanLock = false; // Odpowiedź przyszła — zwalniamy blokadę
                 const statusEl = document.getElementById('statusInfo');
             
                 // Info w pasku (zostawiamy, bo już działa)
@@ -12138,10 +12144,11 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 checkForAnnouncements(currentUser.login, proceedToActionViewApi);
               })
               .catch((err) => {
+                scanLock = false;
                 console.error(err);
                 showNotification('❌ Błąd API: ' + (err?.message || err), 'error');
               });
-            
+
             return; // <- zostaje! dalej nie wchodzimy w starą logikę departments/google.script.run
             let foundUser = null;
             let foundDepartment = null;
