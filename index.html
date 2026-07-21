@@ -4171,6 +4171,29 @@ async function apiScan(code){
   return data;
 }
 
+// Chowa kafelki działów/operacji oznaczonych jako "Nieaktywny" w arkuszu Działy.
+// Fail-open: jeśli fetch się nie uda albo odpowiedź jest dziwna, nic nie chowamy (wszystkie kafelki zostają widoczne).
+async function applyActiveDepartmentTiles(){
+  try {
+    const r = await fetch(`${API_BASE}/departments/active`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
+      body: JSON.stringify({})
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data?.success || !Array.isArray(data.departments) || data.departments.length === 0) return;
+
+    const activeIds = new Set(data.departments.map(d => String(d.id || '').trim()));
+    document.querySelectorAll('#departmentView .tiles-grid .tile').forEach(tile => {
+      const id = [...tile.classList].find(c => c !== 'tile');
+      if (!id) return;
+      if (!activeIds.has(id)) tile.style.display = 'none';
+    });
+  } catch (e) {
+    console.warn('applyActiveDepartmentTiles: pominięto (fail-open)', e);
+  }
+}
+
     async function apiVacationBalance(login){
   const code = (currentUser && currentUser.code) ? String(currentUser.code).trim() : "";
   const r = await fetch(`${API_BASE}/vacations/balance`, {
@@ -7482,9 +7505,11 @@ function handleLogin() {
 
 // Pozwól na Enter w polach logowania
 document.addEventListener('DOMContentLoaded', function() {
+  applyActiveDepartmentTiles();
+
   const loginInput = document.getElementById('loginInput');
   const passwordInput = document.getElementById('passwordInput');
-  
+
   if (loginInput) {
     loginInput.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') handleLogin();
