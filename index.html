@@ -4171,8 +4171,33 @@ async function apiScan(code){
   return data;
 }
 
-// Chowa kafelki działów/operacji oznaczonych jako "Nieaktywny" w arkuszu Działy.
-// Fail-open: jeśli fetch się nie uda albo odpowiedź jest dziwna, nic nie chowamy (wszystkie kafelki zostają widoczne).
+// Statyczny fallback — używany dopóki /departments/active nie odpowie (albo gdy padnie).
+// To ta sama lista, która wcześniej była zduplikowana ~12x w kodzie; teraz jest jednym źródłem.
+const DEFAULT_DEPT_NAMES = {
+  'przyjecie': 'Przyjęcie dostaw',
+  'rozladunek': 'Rozładunek ręczny kontenera',
+  'zaladunek': 'Załadunek ręczny kontenera',
+  'relokacja': 'Relokacja',
+  'kompletacja': 'Kompletacja zamówień',
+  'weryfikacja': 'Weryfikacja zamówień',
+  'co-packing': 'Co-packing',
+  'operacje-porzadkowe': 'Operacje porządkowe',
+  'inwentaryzacja': 'Inwentaryzacja'
+};
+const DEFAULT_DEPT_ICON = '🏷️';
+
+let deptNamesCache = { ...DEFAULT_DEPT_NAMES };
+
+// Wspólne źródło nazw działów — zastępuje 12 zduplikowanych literałów w kodzie.
+// Zwraca zawsze świeżą (zaktualizowaną po fetchu) mapę id -> nazwa.
+function getDeptNamesMap(){
+  return deptNamesCache;
+}
+
+// Pobiera aktywne działy z arkusza Działy i:
+//  1) renderuje kafelki na ekranie kiosku od zera (ikona, nazwa, kolejność z arkusza),
+//  2) aktualizuje wspólną mapę nazw (getDeptNamesMap) o nowe/zmienione nazwy.
+// Fail-open: błąd/pusta odpowiedź = nic się nie zmienia, zostaje statyczny fallback sprzed tej funkcji.
 async function applyActiveDepartmentTiles(){
   try {
     const r = await fetch(`${API_BASE}/departments/active`, {
@@ -4183,11 +4208,41 @@ async function applyActiveDepartmentTiles(){
     const data = await r.json().catch(() => ({}));
     if (!r.ok || !data?.success || !Array.isArray(data.departments) || data.departments.length === 0) return;
 
-    const activeIds = new Set(data.departments.map(d => String(d.id || '').trim()));
+    const grid = document.querySelector('#departmentView .tiles-grid');
+    if (!grid) return;
+
+    const existingTile = grid.querySelector('.tile');
+    const iconMap = {};
     document.querySelectorAll('#departmentView .tiles-grid .tile').forEach(tile => {
       const id = [...tile.classList].find(c => c !== 'tile');
-      if (!id) return;
-      if (!activeIds.has(id)) tile.style.display = 'none';
+      const iconEl = tile.querySelector('.tile-icon');
+      if (id && iconEl) iconMap[id] = iconEl.textContent;
+    });
+
+    grid.innerHTML = '';
+    data.departments.forEach(d => {
+      const id = String(d.id || '').trim();
+      if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return; // tylko bezpieczne znaki - id trafia do class/onclick
+      const name = String(d.name || id).trim();
+      const icon = (d.icon && String(d.icon).trim()) || iconMap[id] || DEFAULT_DEPT_ICON;
+
+      deptNamesCache[id] = name;
+
+      const tile = document.createElement('div');
+      tile.className = `tile ${id}`;
+      tile.addEventListener('click', () => selectDepartment(id));
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'tile-icon';
+      iconSpan.textContent = icon;
+
+      const textSpan = document.createElement('span');
+      textSpan.className = 'tile-text';
+      textSpan.textContent = name;
+
+      tile.appendChild(iconSpan);
+      tile.appendChild(textSpan);
+      grid.appendChild(tile);
     });
   } catch (e) {
     console.warn('applyActiveDepartmentTiles: pominięto (fail-open)', e);
@@ -7871,17 +7926,7 @@ function focusEanInput(retries = 20, delay = 150) {
                 }
                 
                 // Ustaw właściwy tytuł panelu dla TEGO użytkownika
-                const departmentNames = {
-                    'przyjecie': 'Przyjęcie dostaw',
-                    'rozladunek': 'Rozładunek ręczny kontenera',
-                    'zaladunek': 'Załadunek ręczny kontenera',
-                    'relokacja': 'Relokacja',
-                    'kompletacja': 'Kompletacja zamówień',
-                    'weryfikacja': 'Weryfikacja zamówień',
-                    'co-packing': 'Co-packing',
-                    'operacje-porzadkowe': 'Operacje porządkowe',
-                    'inwentaryzacja': 'Inwentaryzacja'
-                };
+                const departmentNames = getDeptNamesMap();
                 
                 const deptName = departmentNames[currentDepartment] || currentDepartment;
                 
@@ -7925,17 +7970,7 @@ function closeCriticalTicketsModal() {
     }
     
     // Ustaw właściwy tytuł panelu dla KIEROWNIKA
-    const departmentNames = {
-        'przyjecie': 'Przyjęcie dostaw',
-        'rozladunek': 'Rozładunek ręczny kontenera',
-        'zaladunek': 'Załadunek ręczny kontenera',
-        'relokacja': 'Relokacja',
-        'kompletacja': 'Kompletacja zamówień',
-        'weryfikacja': 'Weryfikacja zamówień',
-        'co-packing': 'Co-packing',
-        'operacje-porzadkowe': 'Operacje porządkowe',
-        'inwentaryzacja': 'Inwentaryzacja'
-    };
+    const departmentNames = getDeptNamesMap();
     
     const deptName = departmentNames[currentDepartment] || currentDepartment;
     
@@ -8066,17 +8101,7 @@ window.selectDepartment = function(deptId) {
     console.log('selectDepartment wywołane z:', deptId);
     
     // Wspólna mapa nazw działów - PRZENIESIONA NA POCZĄTEK
-    const departmentNames = {
-        'przyjecie': 'Przyjęcie dostaw',
-        'rozladunek': 'Rozładunek ręczny kontenera',
-        'zaladunek': 'Załadunek ręczny kontenera',
-        'relokacja': 'Relokacja',
-        'kompletacja': 'Kompletacja zamówień',
-        'weryfikacja': 'Weryfikacja zamówień',
-        'co-packing': 'Co-packing',
-        'operacje-porzadkowe': 'Operacje porządkowe',
-        'inwentaryzacja': 'Inwentaryzacja'
-    };
+    const departmentNames = getDeptNamesMap();
     
     if (!departments || Object.keys(departments).length === 0) {
         showNotification('Ładowanie danych z arkusza...', 'info');
@@ -8302,17 +8327,7 @@ if (window.isChangingOperation && currentUser) {
                     if (foundUser) {
                         selectedUserForVerification = foundUser;
                         
-                        const departmentNames = {
-                            'przyjecie': 'Przyjęcie dostaw',
-                            'rozladunek': 'Rozładunek ręczny kontenera',
-                            'zaladunek': 'Załadunek ręczny kontenera',
-                            'relokacja': 'Relokacja',
-                            'kompletacja': 'Kompletacja zamówień',
-                            'weryfikacja': 'Weryfikacja zamówień',
-                            'co-packing': 'Co-packing',
-                            'operacje-porzadkowe': 'Operacje porządkowe',
-                            'inwentaryzacja': 'Inwentaryzacja'
-                        };
+                        const departmentNames = getDeptNamesMap();
                         
                         const targetDepartment = currentDepartment || foundDepartment;
                         const deptName = departmentNames[targetDepartment] || targetDepartment;
@@ -8429,17 +8444,7 @@ if (window.isChangingOperation && currentUser) {
                     showNotification('❌ Błąd zapisu: ' + (err?.message || err), 'error');
                   });
 
-                const departmentNames = {
-                    'przyjecie': 'Przyjęcie dostaw',
-                    'rozladunek': 'Rozładunek ręczny kontenera',
-                    'zaladunek': 'Załadunek ręczny kontenera',
-                    'relokacja': 'Relokacja',
-                    'kompletacja': 'Kompletacja zamówień',
-                    'weryfikacja': 'Weryfikacja zamówień',
-                    'co-packing': 'Co-packing',
-                    'operacje-porzadkowe': 'Operacje porządkowe',
-                    'inwentaryzacja': 'Inwentaryzacja'
-                };
+                const departmentNames = getDeptNamesMap();
 
                 const deptName = departmentNames[targetDepartment] || targetDepartment;
 
@@ -8504,17 +8509,7 @@ if (window.isChangingOperation && currentUser) {
             sendToSpreadsheet(currentUser.login, targetDepartment, actionToSend);
         }
         
-        const departmentNames = {
-            'przyjecie': 'Przyjęcie dostaw',
-            'rozladunek': 'Rozładunek ręczny kontenera',
-            'zaladunek': 'Załadunek ręczny kontenera',
-            'relokacja': 'Relokacja',
-            'kompletacja': 'Kompletacja zamówień',
-            'weryfikacja': 'Weryfikacja zamówień',
-            'co-packing': 'Co-packing',
-            'operacje-porzadkowe': 'Operacje porządkowe',
-            'inwentaryzacja': 'Inwentaryzacja'
-        };
+        const departmentNames = getDeptNamesMap();
         
         const deptName = departmentNames[targetDepartment] || targetDepartment;
         
@@ -8577,17 +8572,7 @@ if (window.isChangingOperation && currentUser) {
                 
                 sendToSpreadsheet(currentUser.login, targetDepartment, actionToSend);
                 
-                const departmentNames = {
-                    'przyjecie': 'Przyjęcie dostaw',
-                    'rozladunek': 'Rozładunek ręczny kontenera',
-                    'zaladunek': 'Załadunek ręczny kontenera',
-                    'relokacja': 'Relokacja',
-                    'kompletacja': 'Kompletacja zamówień',
-                    'weryfikacja': 'Weryfikacja zamówień',
-                    'co-packing': 'Co-packing',
-                    'operacje-porzadkowe': 'Operacje porządkowe',
-                    'inwentaryzacja': 'Inwentaryzacja'
-                };
+                const departmentNames = getDeptNamesMap();
                 
                 const deptName = departmentNames[targetDepartment] || targetDepartment;
                 
@@ -8630,17 +8615,7 @@ if (window.isChangingOperation && currentUser) {
             
             sendToSpreadsheet(currentUser.login, targetDepartment, actionToSend);
             
-            const departmentNames = {
-                'przyjecie': 'Przyjęcie dostaw',
-                'rozladunek': 'Rozładunek ręczny kontenera',
-                'zaladunek': 'Załadunek ręczny kontenera',
-                'relokacja': 'Relokacja',
-                'kompletacja': 'Kompletacja zamówień',
-                'weryfikacja': 'Weryfikacja zamówień',
-                'co-packing': 'Co-packing',
-                'operacje-porzadkowe': 'Operacje porządkowe',
-                'inwentaryzacja': 'Inwentaryzacja'
-            };
+            const departmentNames = getDeptNamesMap();
             
             const deptName = departmentNames[targetDepartment] || targetDepartment;
             
@@ -10607,17 +10582,7 @@ function updateTopBarButton() {
                     'Wybierz dział/operację';
                 
                 if (currentUser && currentDepartment) {
-                    const departmentNames = {
-                        'przyjecie': 'Przyjęcie dostaw',
-                        'rozladunek': 'Rozładunek ręczny kontenera',
-                        'zaladunek': 'Załadunek ręczny kontenera',
-                        'relokacja': 'Relokacja',
-                        'kompletacja': 'Kompletacja zamówień',
-                        'weryfikacja': 'Weryfikacja zamówień',
-                        'co-packing': 'Co-packing',
-                        'operacje-porzadkowe': 'Operacje porządkowe',
-                        'inwentaryzacja': 'Inwentaryzacja'
-                    };
+                    const departmentNames = getDeptNamesMap();
                     
                     const deptName = departmentNames[currentDepartment] || currentDepartment;
                     document.getElementById('actionViewTitle').textContent = 
@@ -11802,17 +11767,7 @@ function updateTopBarButton() {
             
             document.getElementById('welcomeHeader').classList.add('show');
             
-            const departmentNames = {
-                'przyjecie': 'Przyjęcie dostaw',
-                'rozladunek': 'Rozładunek ręczny kontenera',
-                'zaladunek': 'Załadunek ręczny kontenera',
-                'relokacja': 'Relokacja',
-                'kompletacja': 'Kompletacja zamówień',
-                'weryfikacja': 'Weryfikacja zamówień',
-                'co-packing': 'Co-packing',
-                'operacje-porzadkowe': 'Operacje porządkowe',
-                'inwentaryzacja': 'Inwentaryzacja'
-            };
+            const departmentNames = getDeptNamesMap();
             
             const deptName = departmentNames[departmentId] || departments[departmentId]?.name || departmentId;
             
@@ -12261,17 +12216,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
                 currentDepartment = targetDepartment;
                 currentUser = foundUser;
                 
-                const departmentNames = {
-                    'przyjecie': 'Przyjęcie dostaw',
-                    'rozladunek': 'Rozładunek ręczny kontenera',
-                    'zaladunek': 'Załadunek ręczny kontenera',
-                    'relokacja': 'Relokacja',
-                    'kompletacja': 'Kompletacja zamówień',
-                    'weryfikacja': 'Weryfikacja zamówień',
-                    'co-packing': 'Co-packing',
-                    'operacje-porzadkowe': 'Operacje porządkowe',
-                    'inwentaryzacja': 'Inwentaryzacja'
-                };
+                const departmentNames = getDeptNamesMap();
                 
                 const deptName = departmentNames[targetDepartment] || targetDepartment;
 
@@ -12733,17 +12678,7 @@ let currentTicketDetails = null;
             currentUser = managerData;
             currentDepartment = managerData.currentDepartment;
             
-            const departmentNames = {
-                'przyjecie': 'Przyjęcie dostaw',
-                'rozladunek': 'Rozładunek ręczny kontenera',
-                'zaladunek': 'Załadunek ręczny kontenera',
-                'relokacja': 'Relokacja',
-                'kompletacja': 'Kompletacja zamówień',
-                'weryfikacja': 'Weryfikacja zamówień',
-                'co-packing': 'Co-packing',
-                'operacje-porzadkowe': 'Operacje porządkowe',
-                'inwentaryzacja': 'Inwentaryzacja'
-            };
+            const departmentNames = getDeptNamesMap();
             
             const deptName = departmentNames[currentDepartment] || currentDepartment;
             
