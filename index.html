@@ -4160,7 +4160,7 @@ function showConfirmationModalApi(payload) {
 async function apiScan(code){
   const r = await fetch(`${API_BASE}/scan`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ code })
   });
 
@@ -4175,7 +4175,7 @@ async function apiScan(code){
   const code = (currentUser && currentUser.code) ? String(currentUser.code).trim() : "";
   const r = await fetch(`${API_BASE}/vacations/balance`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login, code })
   });
   const data = await r.json().catch(() => ({}));
@@ -4187,7 +4187,7 @@ async function apiMyVacationRequests(login){
   const code = (currentUser && currentUser.code) ? String(currentUser.code).trim() : "";
   const r = await fetch(`${API_BASE}/vacations/my-requests`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login, code })
   });
   const data = await r.json().catch(() => ({}));
@@ -4198,7 +4198,7 @@ async function apiMyVacationRequests(login){
 async function apiCreateVacationRequest(payload){
   const r = await fetch(`${API_BASE}/vacations/create`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify(payload || {})
   });
   const data = await r.json().catch(() => ({}));
@@ -4209,7 +4209,7 @@ async function apiCreateVacationRequest(payload){
 async function apiProcessVacation(login, requestId, decision, comment) {
   const r = await fetch(`${API_BASE}/vacations/process`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, requestId, decision, comment })
   });
   const data = await r.json().catch(() => ({}));
@@ -4220,7 +4220,7 @@ async function apiProcessVacation(login, requestId, decision, comment) {
 async function apiGetPendingVacations(login) {
   const r = await fetch(`${API_BASE}/vacations/pending`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4231,7 +4231,7 @@ async function apiGetPendingVacations(login) {
 async function apiGetDayOffRequests(login) {
   const r = await fetch(`${API_BASE}/absences/dayoff/my`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4242,7 +4242,7 @@ async function apiGetDayOffRequests(login) {
 async function apiGetOccasionalLeaveRequests(login) {
   const r = await fetch(`${API_BASE}/absences/occasional/my`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4253,7 +4253,7 @@ async function apiGetOccasionalLeaveRequests(login) {
 async function apiGetYearPlanCalendar(login, year) {
   const r = await fetch(`${API_BASE}/vacations/year-plan/calendar`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login, year })
   });
   const data = await r.json().catch(() => ({}));
@@ -4264,7 +4264,7 @@ async function apiGetYearPlanCalendar(login, year) {
 async function apiSubmitYearPlan(planData) {
   const r = await fetch(`${API_BASE}/vacations/year-plan/submit`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify(planData || {})
   });
   const data = await r.json().catch(() => ({}));
@@ -4275,7 +4275,7 @@ async function apiSubmitYearPlan(planData) {
 async function apiGetPendingDayOff(login) {
   const r = await fetch(`${API_BASE}/absences/dayoff/pending`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4286,7 +4286,7 @@ async function apiGetPendingDayOff(login) {
 async function apiGetPendingOccasional(login) {
   const r = await fetch(`${API_BASE}/absences/occasional/pending`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4297,7 +4297,7 @@ async function apiGetPendingOccasional(login) {
 async function apiGetPendingYearPlan(login) {
   const r = await fetch(`${API_BASE}/vacations/year-plan/pending`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4308,7 +4308,7 @@ async function apiGetPendingYearPlan(login) {
 async function apiProcessYearPlanWithDates(login, requestId, decision, comment, selectedDates) {
   const r = await fetch(`${API_BASE}/vacations/year-plan/process-dates`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, requestId, decision, comment, selectedDates })
   });
   const data = await r.json().catch(() => ({}));
@@ -4319,7 +4319,7 @@ async function apiProcessYearPlanWithDates(login, requestId, decision, comment, 
 async function apiProcessDayOff(login, requestId, decision, comment) {
   const r = await fetch(`${API_BASE}/absences/dayoff/process`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, requestId, decision, comment })
   });
   const data = await r.json().catch(() => ({}));
@@ -4330,7 +4330,7 @@ async function apiProcessDayOff(login, requestId, decision, comment) {
 async function apiProcessOccasional(login, requestId, decision, comment) {
   const r = await fetch(`${API_BASE}/absences/occasional/process`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, requestId, decision, comment })
   });
   const data = await r.json().catch(() => ({}));
@@ -4341,7 +4341,7 @@ async function apiProcessOccasional(login, requestId, decision, comment) {
 async function apiProcessYearPlan(login, requestId, decision, comment) {
   const r = await fetch(`${API_BASE}/vacations/year-plan/process`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, requestId, decision, comment })
   });
   const data = await r.json().catch(() => ({}));
@@ -4352,7 +4352,7 @@ async function apiProcessYearPlan(login, requestId, decision, comment) {
 async function apiGetAbsenceCounts(login) {
   const r = await fetch(`${API_BASE}/vacations/pending-counts`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4363,7 +4363,7 @@ async function apiGetAbsenceCounts(login) {
 async function apiGetPendingAbsenceCount(login) {
   const r = await fetch(`${API_BASE}/vacations/pending-count`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4374,7 +4374,7 @@ async function apiGetPendingAbsenceCount(login) {
 async function apiGetAllAbsenceHistory(login) {
   const r = await fetch(`${API_BASE}/vacations/my-all`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -4385,7 +4385,7 @@ async function apiGetAllAbsenceHistory(login) {
 async function apiRegisterL4(login, employeeLogin, startDate, endDate, l4Type, note) {
   const r = await fetch(`${API_BASE}/absences/l4/register`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login, employeeLogin, startDate, endDate, l4Type, note })
   });
   const data = await r.json().catch(() => ({}));
@@ -4396,97 +4396,97 @@ async function apiRegisterL4(login, employeeLogin, startDate, endDate, l4Type, n
 // ===== API HELPERS — TICKETY =====
 
 async function apiGetOpenTicketsCount() {
-  const r = await fetch(`${API_BASE}/tickets/open-count`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const r = await fetch(`${API_BASE}/tickets/open-count`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' }, body: '{}' });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiGetUnreadTicketReplies(login) {
-  const r = await fetch(`${API_BASE}/tickets/unread-replies`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const r = await fetch(`${API_BASE}/tickets/unread-replies`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' }, body: JSON.stringify({ login }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiGetUnreadTicketsCount(login) {
-  const r = await fetch(`${API_BASE}/tickets/unread-count`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const r = await fetch(`${API_BASE}/tickets/unread-count`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' }, body: JSON.stringify({ login }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiGetCriticalTicketsCount(login) {
-  const r = await fetch(`${API_BASE}/tickets/critical-count`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const r = await fetch(`${API_BASE}/tickets/critical-count`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiGetCriticalTickets(login) {
-  const r = await fetch(`${API_BASE}/tickets/critical`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const r = await fetch(`${API_BASE}/tickets/critical`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiGetAllTickets(login, filter) {
-  const r = await fetch(`${API_BASE}/tickets/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, filter: filter || 'all' }) });
+  const r = await fetch(`${API_BASE}/tickets/all`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login, filter: filter || 'all' }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiGetMyTickets(login) {
-  const r = await fetch(`${API_BASE}/tickets/my`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const r = await fetch(`${API_BASE}/tickets/my`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' }, body: JSON.stringify({ login }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiSubmitTicket(login, name, category, title, description, location, priority) {
-  const r = await fetch(`${API_BASE}/tickets/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, name, category, title, description, location, priority }) });
+  const r = await fetch(`${API_BASE}/tickets/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' }, body: JSON.stringify({ login, name, category, title, description, location, priority }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiUpdateTicketStatus(login, ticketId, newStatus, comment) {
-  const r = await fetch(`${API_BASE}/tickets/update-status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, ticketId, newStatus, comment }) });
+  const r = await fetch(`${API_BASE}/tickets/update-status`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login, ticketId, newStatus, comment }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiMarkTicketAsRead(login, ticketId) {
-  const r = await fetch(`${API_BASE}/tickets/mark-read`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, ticketId }) });
+  const r = await fetch(`${API_BASE}/tickets/mark-read`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' }, body: JSON.stringify({ login, ticketId }) });
   const data = await r.json().catch(() => ({}));
   return data;
 }
 
 async function apiWfGetDepartments(login) {
-  const r = await fetch(`${API_BASE}/workforce/departments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const r = await fetch(`${API_BASE}/workforce/departments`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login }) });
   return r.json().catch(() => ({}));
 }
 
 async function apiWfGetAvailability(login, dept, mondayDate) {
-  const r = await fetch(`${API_BASE}/workforce/availability`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, dept, mondayDate }) });
+  const r = await fetch(`${API_BASE}/workforce/availability`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login, dept, mondayDate }) });
   return r.json().catch(() => ({}));
 }
 
 async function apiWfSavePlan(login, plan) {
-  const r = await fetch(`${API_BASE}/workforce/plan/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, plan }) });
+  const r = await fetch(`${API_BASE}/workforce/plan/save`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login, plan }) });
   return r.json().catch(() => ({}));
 }
 
 async function apiWfGetPlan(login, dept, mondayDate) {
-  const r = await fetch(`${API_BASE}/workforce/plan/get`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, dept, mondayDate }) });
+  const r = await fetch(`${API_BASE}/workforce/plan/get`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login, dept, mondayDate }) });
   return r.json().catch(() => ({}));
 }
 
 async function apiWfGetPreviousPlan(login, dept, mondayDate) {
-  const r = await fetch(`${API_BASE}/workforce/plan/previous`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, dept, mondayDate }) });
+  const r = await fetch(`${API_BASE}/workforce/plan/previous`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login, dept, mondayDate }) });
   return r.json().catch(() => ({}));
 }
 
 async function apiWfGetAgencies(login) {
-  const r = await fetch(`${API_BASE}/workforce/agencies`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login }) });
+  const r = await fetch(`${API_BASE}/workforce/agencies`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login }) });
   return r.json().catch(() => ({}));
 }
 
 async function apiWfSendAgency(login, req) {
-  const r = await fetch(`${API_BASE}/workforce/agency/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, ...req }) });
+  const r = await fetch(`${API_BASE}/workforce/agency/send`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' }, body: JSON.stringify({ login, ...req }) });
   return r.json().catch(() => ({}));
 }
 
@@ -4650,7 +4650,7 @@ async function apiDashboardFull(){
 
   const r = await fetch(`${API_BASE}/dashboard/full`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, dept: dashDeptFilter })
   });
 
@@ -4665,7 +4665,7 @@ async function apiAbsenceHistory(days){
 
   const r = await fetch(`${API_BASE}/dashboard/absence-history`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, days })
   });
 
@@ -4680,7 +4680,7 @@ async function apiDashboardReport(days){
 
   const r = await fetch(`${API_BASE}/dashboard/report`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({
       login,
       dept: dashDeptFilter,
@@ -4949,7 +4949,7 @@ async function loadDayDetail(i, date) {
   try {
     const resp = await fetch(`${API_BASE}/dashboard/day-detail`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
       body: JSON.stringify({ login, date })
     });
     const data = await resp.json();
@@ -5693,7 +5693,7 @@ async function loadDashboardFull(showToast){
 
   const r = await fetch(`${API_BASE}/dashboard/snapshot`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
 
@@ -5739,7 +5739,7 @@ async function loadDashboardSnapshot(showToast){
 
   const r = await fetch(`${API_BASE}/scan`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify(payload)
   });
 
@@ -5753,7 +5753,7 @@ async function loadDashboardSnapshot(showToast){
     async function apiGetUnreadAnnouncements(login){
   const r = await fetch(`${API_BASE}/announcements/unread`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ login })
   });
 
@@ -5766,7 +5766,7 @@ async function loadDashboardSnapshot(showToast){
     async function apiLookupEmployeeByCode(code){
   const r = await fetch(`${API_BASE}/employee/by-code`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ code })
   });
 
@@ -5780,7 +5780,7 @@ async function loadDashboardSnapshot(showToast){
 async function apiMarkAnnouncementAsRead(id, login){
   const r = await fetch(`${API_BASE}/announcements/mark-read`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
     body: JSON.stringify({ id, login })
   });
 
@@ -5793,7 +5793,7 @@ async function apiMarkAnnouncementAsRead(id, login){
     async function apiListAnnouncementsForManager(login){
   const r = await fetch(`${API_BASE}/announcements/list`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
 
@@ -5818,7 +5818,7 @@ async function apiMarkAnnouncementAsRead(id, login){
     async function apiGetEmployeesForRecipients(login){
   const r = await fetch(`${API_BASE}/announcements/employees`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   });
   const data = await r.json().catch(() => ({}));
@@ -5829,7 +5829,7 @@ async function apiMarkAnnouncementAsRead(id, login){
 async function apiCreateAnnouncement(login, typ, tresc, dataWaznosci, odbiorcy, autor){
   const r = await fetch(`${API_BASE}/announcements/create`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login, typ, tresc, dataWaznosci, odbiorcy, autor })
   });
   const data = await r.json().catch(() => ({}));
@@ -5878,7 +5878,7 @@ async function runReport(type, btnEl) {
   try {
     const resp = await fetch(API_BASE + '/reports/' + type, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
       body: JSON.stringify({ login })
     });
     const data = await resp.json();
@@ -6080,7 +6080,7 @@ function refreshWorkforceLiveUI(){
 
   fetch(`${API_BASE}/workforce/live-snapshot`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
     body: JSON.stringify({ login })
   })
   .then(r => r.json().then(data => ({ ok: r.ok, data })))
@@ -8334,7 +8334,7 @@ if (window.isChangingOperation && currentUser) {
 
         fetch(`${API_BASE}/employee/by-code`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
             body: JSON.stringify({ code: cleanInputCode })
         })
         .then(r => r.json())
@@ -9352,7 +9352,7 @@ if (code && !sessionStorage.getItem('currentEmployeeCode')) {
 
     const r = await fetch(`${API_BASE}/absences/dayoff/create`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
       body: JSON.stringify({ ...dayOffData, code })
     });
 
@@ -9583,7 +9583,7 @@ if (code && !sessionStorage.getItem('currentEmployeeCode')) {
 
     const r = await fetch(`${API_BASE}/absences/occasional/create`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
       body: JSON.stringify({ ...occasionalData, code })
     });
 
@@ -12458,7 +12458,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
 
             fetch(`${API_BASE}/pdf/vacation`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
                 body: JSON.stringify({ login: currentUser.login, requestData })
             })
             .then(function(r) {
@@ -12495,7 +12495,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
 
             fetch(`${API_BASE}/pdf/dayoff`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
                 body: JSON.stringify({ login: currentUser.login, requestData })
             })
             .then(function(r) {
@@ -12532,7 +12532,7 @@ wychodziPrzerwaBtn && wychodziPrzerwaBtn.classList.remove('disabled');
 
             fetch(`${API_BASE}/pdf/occasional`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
                 body: JSON.stringify({ login: currentUser.login, requestData })
             })
             .then(function(r) {
@@ -14224,7 +14224,7 @@ function refreshLiveWorkforce() {
 
     fetch(`${API_BASE}/workforce/live-snapshot`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 8150c776d54607165aebe0a3b1f15d732fa1acd248bca130de4b5e1c5aa40608' },
       body: JSON.stringify({ login: snapshotLogin })
     })
     .then(r => r.json())
@@ -14416,7 +14416,7 @@ window.confirmL4ManagerCode = function() {
     // Weryfikacja przez API — sprawdza rolę z arkusza Pracownicy
     fetch(`${API_BASE}/employee/by-code`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
         body: JSON.stringify({ code: cleanCode })
     })
     .then(r => r.json())
@@ -14655,7 +14655,7 @@ window.confirmTicketUserCode = async function() {
     try {
         const r = await fetch(`${API_BASE}/employee/by-code`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 818f2ed0000ab24a07760dc6c2f27089382beab6e946a9c69576e1d1d2295510' },
             body: JSON.stringify({ code: cleanCode })
         });
         const data = await r.json().catch(() => ({}));
